@@ -24,6 +24,5 @@
             "https://www.battlemetrics.com/*"
           ]
         }
-    ],
-    "permissions": ["activeTab"]
+    ]
   }
