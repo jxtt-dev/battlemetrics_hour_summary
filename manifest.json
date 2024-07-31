@@ -1,0 +1,29 @@
+{
+    "manifest_version": 3,
+    "name": "BattleMetrics Hour Summary",
+    "description": "Summarizes hours on BattleMetrics",
+    "version": "1.0",
+    "icons": {
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    },
+    "action": {
+      "default_popup": "popup/popup.html",
+      "default_icon": "images/icon48.png"
+    },
+    "content_scripts": [
+        {
+          "js": [
+            "static/game_name_mapping.js",
+            "scripts/helpers.js",
+            "scripts/generate-html.js",
+            "scripts/content.js"
+          ],
+          "css": ["css/style.css"],
+          "matches": [
+            "https://www.battlemetrics.com/*"
+          ]
+        }
+    ],
+    "permissions": ["activeTab"]
+  }
