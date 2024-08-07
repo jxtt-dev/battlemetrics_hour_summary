@@ -1,7 +1,30 @@
 <html>
-  <body style="width: 200px;">
+  <style>
+    body { width: 200px; }
+    .popup-footer-div {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .popup-footer-item {
+      flex: 50%;
+      margin: 0;
+      padding: 0;
+    }
+    #popup-version-text {
+      color: 	#A9A9A9;
+      text-align: right;
+    }
+  </style>
+  <body>
     <p>Visit a players BattleMetrics page to view their hour summary.</p>
     <br>
-    <a href="https://github.com/jxtt-dev/battlemetrics_hour_summary">Github</a>
+    <div class="popup-footer-div">
+      <a href="https://github.com/jxtt-dev/battlemetrics_hour_summary" class="popup-footer-item">
+        Github
+      </a>
+      <p id="popup-version-text" class="popup-footer-item">V1.0.1</p>
+    </div>
   </body>
 </html>
