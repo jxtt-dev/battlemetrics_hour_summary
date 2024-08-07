@@ -78,35 +78,47 @@ const calculateHours = (serverData) => {
     return timeData;
 }
 
-// Update HTML for hour summary
-const updateHTML = (timeData) => {
+// Setup initial HTML and add spinner while calculating hour summary
+const initHTML = () => {
     const detailsDiv = document.querySelector(DETAILS_DIV_SELECTOR);
 
-    // Create wrapper div, with enough height for all vertical tabs
+    // Create wrapper div
     const wrapperDiv = document.createElement('div');
     wrapperDiv.setAttribute('id', 'bm-hour-wrapper');
     wrapperDiv.setAttribute('class', 'row');
 
+    // Add title
+    wrapperDiv.innerHTML = '<div><h4>Hour summary</h4></div>';
+
     // Insert wrapper after details div
     detailsDiv.parentNode.insertBefore(wrapperDiv, detailsDiv.nextSibling);
-
-    // Create inner div, with enough height for all vertical tabs
+    
+    // Create inner div
     const summaryDiv = document.createElement('div');
     summaryDiv.setAttribute('id', 'bm-hour-summary');
-    summaryDiv.style.setProperty('height', `${64 * Object.keys(timeData).length}px`);
 
-    // Generate summary HTML
-    // Title
-    summaryDiv.innerHTML = '<div><h4>Hour summary</h4></div>';
-
-    // Tab buttons
-    generateTabButtons(summaryDiv, timeData);
-
-    // Tab content
-    generateTabContents(summaryDiv, timeData);
+    // Add spinner to inner div
+    summaryDiv.classList.toggle('loading-summary');
+    summaryDiv.innerHTML = '<p>Loading Hour Summary...</p>';
 
     // Insert inner div
     wrapperDiv.appendChild(summaryDiv);
+}
+
+// Update HTML with hour summary content
+const updateHTML = (timeData) => {
+    const summaryDiv = document.getElementById('bm-hour-summary');
+    
+    // Clear loading state, set height to fit vertical tabs
+    summaryDiv.classList.toggle('loading-summary');
+    summaryDiv.innerHTML = '';
+    summaryDiv.style.setProperty('height', `${64 * Object.keys(timeData).length}px`);
+    
+    // Add tab buttons
+    generateTabButtons(summaryDiv, timeData);
+
+    // Add tab content
+    generateTabContents(summaryDiv, timeData);
 
     // Setup tab buttons
     prepTabs(timeData);
@@ -114,11 +126,15 @@ const updateHTML = (timeData) => {
 
 const renderHourSummary = async () => {
     try {
+        // Setup HTML with loading state
+        initHTML();
+
+        // Calculate hour summary
         const playerId = extractPlayerId(window.location.href);
         const serverData = await fetchServerData(playerId);
         const gameTime = calculateHours(serverData);
 
-        // Generate and insert HTML
+        // Populate HTML with summary data
         updateHTML(gameTime);
         console.log('BattleMetrics Hour Summary - Finished generating content');
     } catch (e) {
@@ -142,7 +158,11 @@ const addLocationObserver = (callback) => {
 
 // Verify that user is on player overview page
 const observerCallback = async () => {
-    if (window.location.href.startsWith(PLAYER_PAGE_URL) && document.getElementById(PLAYER_PAGE_ID)) {
+    if (
+        window.location.href.startsWith(PLAYER_PAGE_URL) 
+        && document.getElementById(PLAYER_PAGE_ID)
+        && !document.getElementById('bm-hour-wrapper') // Prevent double rendering
+    ) {
         await renderHourSummary();
     }
 }
