@@ -1,29 +1,72 @@
+#prev-ids-show-more {
+  display: none;
+}
+#show-ids-label {
+  color: #777;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: normal;
+  padding-left: 15px;
+}
+#bm-ids-div {
+  display: none;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 20px;
+  padding: 0px 15px 15px;
+  max-height: 250px;
+  overflow-y: scroll;
+  background-color: #151515;
+  color-scheme: dark;
+}
+#prev-id-title {
+  flex: auto;
+  position: sticky; top: 0;
+  width: 100%;
+  padding-top: 10px;
+  margin-bottom: -15px;
+  background-color: #151515;
+}
+.bm-ids-show-more {
+  display: flex !important;
+}
+.prev-id {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+  min-width: 250px;
+  max-width: 350px;
+  height: 50px;
+  border-left: 2px solid #777;
+  padding-left: 8px;
+}
+.prev-id p {
+  margin: 0;
+} 
+
 #bm-hour-wrapper {
-    padding-left: 15px;
-    padding-right: 15px;
-    padding-bottom: 10px;
+  padding-left: 15px;
+  padding-right: 15px;
+  padding-bottom: 10px;
+  color-scheme: dark;
 }
 #bm-hour-summary {
-    min-height: 300px;
-    width: 100%;
+  min-height: 300px;
+  width: 100%;
 }
 #bm-hour-summary * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
-.loading-summary {
+.loading-state {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 0;
   background-color: #1C1C1C;
 }
-.loading-summary p {
+.loading-state p {
   font-size: 18px;
-}
-
-#hour-text {
-    padding-bottom: 15px;
 }
 
 /* Style the tab */
@@ -73,13 +116,53 @@
   background-color: #151515;
 }
 
+.past-weeks-hours {
+  display: flex;
+  align-items: baseline;
+}
+.past-weeks-hours select {
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid;
+  text-align: center;
+  background: #151515;
+}
+.past-weeks-hours select:required:invalid {
+  color: #777;
+  border-bottom: 1px solid white;
+}
+.past-weeks-hours .timeframe-estimation-text {
+  font-size: 11px;
+  font-style: italic;
+  color: #777;
+}
+
+/* Loading spinner */
+.past-weeks-hours .css-loader {
+  width: 11px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(farthest-side,#eeeeee 94%,#0000) top/4px 4px no-repeat,
+    conic-gradient(#0000 30%,#eeeeee);
+  -webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 4px),#000 0);
+  animation: l13 1s infinite linear;
+  display: inline-block;
+  margin-top: 3px;
+  padding-left: 3px;
+}
+@keyframes l13{
+  100%{transform: rotate(1turn)}
+}
+
 #show-more-label {
   color: #777;
   text-decoration: underline;
   cursor: pointer;
   font-weight: normal;
   padding-left: 45%;
-  margin-top: 10px;
+  margin-top: 5px;
 }
 
 .tabcontent input[type=checkbox] {
@@ -87,8 +170,17 @@
 }
 
 .server-playtimes {
-  max-height: 40%;
+  max-height: 50% !important;
   overflow-y: hidden;
+}
+
+#highest-playtime-header {
+  position: sticky;
+  top: 0;
+
+  background-color: #151515;
+  padding: 5px 0 8px 0;
+  margin: 0 auto;
 }
 
 /* Only show first 5 list elements by default */
