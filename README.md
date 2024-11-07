@@ -2,6 +2,9 @@
 
 A Chrome extension to summarize a players hours on BattleMetrics.
 
+**Youtube Demo:**
+
+[![Youtube Demo](https://img.youtube.com/vi/cFOoKDuIqcI/0.jpg)](https://www.youtube.com/watch?v=cFOoKDuIqcI)
 
 ### Installation
 #### From the Chrome Web Store
