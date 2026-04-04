@@ -1,0 +1,29 @@
+.bmhs-compact-player-name {
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  padding-top: 15px;
+  row-gap: 10px;
+}
+.bmhs-compact-details-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  max-width: fit-content;
+  gap: 30px;
+  padding: 5px 0;
+}
+.bmhs-compact-details-column {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bmhs-compact-details-row {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+}
+#bmhs-compact-session-duration p {
+  padding: 0;
+  margin: 0;
+}

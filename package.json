@@ -1,0 +1,25 @@
+{
+  "name": "battlemetrics_hour_summary",
+  "version": "1.2.0",
+  "description": "Summarizes player hours on BattleMetrics.",
+  "author": "jxtt-dev",
+  "license": "MIT",
+  "type": "commonjs",
+  "homepage": "https://github.com/jxtt-dev/battlemetrics_hour_summary",
+  "scripts": {
+    "typecheck": "tsc",
+    "build": "node build.mjs",
+    "build:prod": "node build.mjs --prod",
+    "check": "tsc && node build.mjs"
+  },
+  "devDependencies": {
+    "@types/chartist": "0.11.1",
+    "@types/webextension-polyfill": "0.12.5",
+    "esbuild": "0.27.4",
+    "typescript": "6.0.2"
+  },
+  "dependencies": {
+    "chartist": "0.11.4",
+    "webextension-polyfill": "0.12.0"
+  }
+}

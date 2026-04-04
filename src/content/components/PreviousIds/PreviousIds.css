@@ -1,0 +1,80 @@
+#bmhs-prev-ids-show-more {
+  display: none;
+}
+#bmhs-show-ids-label {
+  color: var(--bmhs-light-grey-color);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: normal;
+  padding-left: 15px;
+  user-select: none;
+}
+#bmhs-ids-div {
+  display: none;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 20px;
+  margin-bottom: 10px;
+  padding: 0px 15px 15px;
+  background-color: var(--bmhs-dark-gray-color);
+  color-scheme: dark;
+  align-content: flex-start;
+  resize: vertical;
+  overflow-y: scroll;
+  height: 250px;
+  min-height: 250px;
+  max-height: fit-content;
+}
+#bmhs-prev-id-title-wrapper {
+  display: flex;
+  flex: auto;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky; top: 0;
+  width: 100%;
+  padding: 10px 0 5px;
+  margin-bottom: -10px;
+  background-color: var(--bmhs-dark-gray-color);
+}
+#bmhs-prev-id-title {
+  margin: 0;
+}
+#bmhs-prev-id-count {
+  margin: 5px 0 0;
+}
+#bmhs-prev-id-search {
+  max-width: 30%;
+}
+#bmhs-prev-id-search::-webkit-search-cancel-button {
+  /* Not supported in Firefox */
+  /* Reset styling */
+  display: block;
+  appearance: auto;
+  -webkit-appearance: none;
+
+  /* Custom cancel button */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath stroke='%23999999' stroke-width='2.5' d='M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  height: 16px;
+  width: 16px;
+  cursor: pointer;
+}
+.bmhs-ids-show-more {
+  display: flex !important;
+}
+.bmhs-prev-id {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+  min-width: 250px;
+  max-width: 350px;
+  height: 50px;
+  border-left: 2px solid var(--bmhs-light-grey-color);
+  padding-left: 8px;
+}
+.bmhs-prev-id p {
+  margin: 0;
+}

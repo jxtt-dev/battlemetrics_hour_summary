@@ -1,0 +1,30 @@
+.bmhs-server-playtimes {
+  max-height: 160px;
+  overflow-y: auto;
+}
+/* Only show first 5 list elements by default */
+.bmhs-server-playtimes li { display: none; }
+.bmhs-server-playtimes li:nth-child(-n+5) { display: list-item; }
+/* Show 20 elements */
+.bmhs-server-playtimes .bmhs-show-rest li:nth-child(-n+20) {
+  display: list-item;
+}
+#bmhs-highest-playtime-header {
+  position: sticky;
+  top: 0;
+  background-color: var(--bmhs-dark-gray-color);
+  padding: 5px 0 8px 0;
+  margin: 0 auto;
+}
+.bmhs-show-more-label {
+  color: var(--bmhs-light-grey-color);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: normal;
+  padding-left: 45%;
+  margin-top: 5px;
+  user-select: none;
+}
+.bmhs-show-more-button {
+  display: none;
+}
