@@ -1,0 +1,34 @@
+{
+    "manifest_version": 3,
+    "name": "BattleMetrics Hour Summary",
+    "version": "1.2.0",
+    "author": "jxtt-dev",
+    "description": "Summarizes player hours on BattleMetrics.",
+    "homepage_url": "https://github.com/jxtt-dev/battlemetrics_hour_summary",
+    "icons": {
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": "images/icon48.png"
+    },
+    "options_ui": {
+        "page": "options.html",
+        "open_in_tab": true
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://www.battlemetrics.com/*"],
+            "js": ["content.js"],
+            "css": ["content.css"]
+        }
+    ],
+    "permissions": ["storage"],
+    "host_permissions": ["https://api.battlemetrics.com/*"],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "battlemetrics-hour-summary@jxtt-dev.me"
+        }
+    }
+}

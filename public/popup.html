@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>BattleMetrics Hour Summary Extension Popup</title>
+        <link rel="stylesheet" href="popup.css" />
+    </head>
+    <body>
+        <h2 id="title">BattleMetrics Hour Summary</h2>
+        <p>Visit a players BattleMetrics page to view their hour summary.</p>
+        <p>If hour summary does not render, try refreshing the page.</p>
+        <h3 id="subtitle">Settings</h3>
+
+        <div class="options-wrapper">
+            <form id="options-form">
+                <!-- Auto-populated -->
+            </form>
+            <div class="status-wrapper">
+                <p id="status-text"></p>
+            </div>
+        </div>
+        <div class="popup-footer-div">
+            <a href="#" class="popup-footer-item" id="open-options">
+                Settings
+            </a>
+            <a
+                href="https://github.com/jxtt-dev/battlemetrics_hour_summary"
+                class="popup-footer-item"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                GitHub
+            </a>
+            <p id="popup-version-text" class="popup-footer-item">
+                <span id="version-number">0.0.0</span>
+            </p>
+        </div>
+        <script src="popup.js"></script>
+    </body>
+</html>

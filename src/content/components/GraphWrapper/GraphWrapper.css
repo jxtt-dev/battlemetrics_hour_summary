@@ -1,0 +1,141 @@
+.bmhs-playtime-graph-button-group {
+  display: flex;
+  gap: 4px;
+}
+.bmhs-graph-type-toggle {
+  height: 23px;
+  width: 45px;
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+  background-color: rgb(26, 26, 26);
+  background-image: linear-gradient(
+      rgb(51, 51, 51) 0%,
+      rgb(34, 34, 34) 100%
+  );
+  font-size: 11px;
+  font-weight: normal;
+  color: white;
+  text-align: center;
+  vertical-align: middle;
+  box-shadow: rgba(0, 0, 0, 0.125) 0px 3px 5px 0px inset;
+  padding: 0;
+  margin: 0;
+  border-radius: 3px;
+}
+.bmhs-toggle-wrapper {
+  display: flex;
+  position: relative;
+  height: 100%;
+  align-items: center;
+  border: 1px solid #000;
+  border-radius: 3px;
+  overflow: hidden;
+}
+/* Hidden Checkbox */
+.bmhs-graph-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.bmhs-toggle-option-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #949494;
+}
+#bmhs-graph-toggle-bar-chart-icon {
+  width: 18px;
+  height: 18px;
+}
+#bmhs-graph-toggle-calendar-icon {
+  width: 16px;
+  height: 16px;
+}
+.bmhs-toggle-option-box:first-of-type {
+  border-right: 1px solid #000;
+}
+
+.bmhs-toggle-option-box:hover {
+  background-color: #282828;
+  box-shadow: none;
+}
+.bmhs-graph-toggle-input:not(:checked) + .bmhs-toggle-option-box,
+.bmhs-graph-toggle-input:checked
+  + .bmhs-toggle-option-box
+  + .bmhs-toggle-option-box {
+  color: #eee;
+  background-image: none;
+  background-color: #282828;
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+}
+.bmhs-playtime-graph-button {
+  background-color: #1a1a1a;
+  background-image: linear-gradient(#333 0%, #222 100%);
+  border: 1px solid black;
+  border-radius: 3px;
+  font-size: 12px;
+  color: white;
+  text-align: center;
+  vertical-align: middle;
+  box-shadow: rgba(0, 0, 0, 0.125) 0px 3px 5px 0px inset;
+  padding: 2px 5px;
+}
+.bmhs-playtime-graph-button:hover {
+  background-color: #282828;
+  background-image: none;
+}
+.bmhs-playtime-graph-scroll-wrapper {
+  height: 150px;
+  display: none;
+  position: relative;
+  width: 100%;
+  margin: auto;
+}
+.bmhs-playtime-graph-wrapper {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  align-items: center;
+  display: flex;
+  min-height: 100%;
+}
+.bmhs-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: none;
+  border-radius: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+
+  /* Hidden by default */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.bmhs-scroll-btn--left  { left: 4px; }
+.bmhs-scroll-btn--right { right: 4px; }
+
+.bmhs-scroll-btn--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bmhs-scroll-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}

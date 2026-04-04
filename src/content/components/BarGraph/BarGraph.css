@@ -1,0 +1,27 @@
+.bmhs-ct-tooltip {
+  max-width: fit-content;
+  position: fixed;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 5px;
+  padding: 5px;
+  color: #eee;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 9999;
+}
+.bmhs-ct-tooltip.bmhs-ct-tooltip--show {
+  opacity: 1;
+}
+.bmhs-ct-tooltip-label {
+  color: #eee;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+/* Force grid color */
+.ct-grid {
+  stroke: #555 !important;
+}
+.ct-label {
+  color: #eee !important;
+}
