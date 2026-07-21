@@ -13,6 +13,7 @@ const entryPoints = [
     'src/content.ts',
     'src/popup.ts',
     'src/options.ts',
+    'src/background.ts',
 ];
 
 const ctx = await esbuild.context({

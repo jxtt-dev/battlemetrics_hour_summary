@@ -1,7 +1,7 @@
 import { SessionData, DailyPlaytime } from '../../shared/types';
 import { BM_API } from '../../shared/constants';
 import { GLOBAL_STATE } from './globalState';
-import { fetchWithRateLimit } from '../../utils/fetchWithRateLimit';
+import { fetchFromBMApi } from '../../utils/bmApi';
 import { dedupeIncluded } from '../../utils/helpers';
 
 /**
@@ -60,16 +60,9 @@ export async function fetchSessionData(
         }).toString();
 
     const fetchPage = async (pageUrl: string) => {
-        const response = await fetchWithRateLimit(pageUrl);
+        const json = (await fetchFromBMApi(pageUrl)) as Record<string, any>;
 
-        if (!response.ok) {
-            throw new Error(
-                `BattleMetrics API Response status: ${response.status}`
-            );
-        }
-
-        const json = await response.json();
-        if (!('data' in json)) {
+        if (!json || !('data' in json)) {
             throw new Error(`BattleMetrics API returned incorrect data`);
         }
 

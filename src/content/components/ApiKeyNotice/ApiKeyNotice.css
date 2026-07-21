@@ -1,0 +1,17 @@
+#bmhs-api-key-notice {
+  margin-bottom: 15px;
+}
+.bmhs-api-key-notice-inner {
+  padding: 10px 15px;
+  border: 1px solid #a94442;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background-color: var(--bmhs-dark-gray-color);
+}
+.bmhs-api-key-notice-inner p {
+  margin: 5px 0 0;
+}
+.bmhs-api-key-notice-inner p:last-child {
+  color: var(--bmhs-light-grey-color);
+  font-size: 12px;
+}

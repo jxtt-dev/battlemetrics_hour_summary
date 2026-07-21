@@ -11,6 +11,8 @@ import {
 } from './content/services';
 import { getExtensionOptions } from './utils/extensionOptionHelpers';
 import { compactPlayerPage } from './content/components/CompactPlayerPage';
+import { renderApiKeyNotice } from './content/components/ApiKeyNotice';
+import { BMApiError } from './utils/bmApi';
 import { render as renderHourSummary } from './content/components/HourSummary';
 import {
     render as renderPlayerSearch,
@@ -72,6 +74,10 @@ async function handleLocationChange(): Promise<void> {
             const summaryDataPromise = fetchAndStoreHourSummaryData();
             const sessionDataPromise = fetchAndStoreSessionData();
 
+            // Both requests fail together when the API token is missing or
+            // invalid, so keep the session rejection from going unhandled
+            sessionDataPromise.catch(() => {});
+
             // Await summaryDataPromise first, as it generally resolves faster
             // sessionDataPromise will be awaited closer to the UI elements that need it
             // to prevent the slower request from blocking UI rendering
@@ -94,6 +100,11 @@ async function handleLocationChange(): Promise<void> {
             console.log('[BattleMetrics Hour Summary] Added player search bar');
         }
     } catch (e) {
+        // Tell the user when the API token is the problem, as the summary
+        // cannot render at all without a valid one
+        if (e instanceof BMApiError && e.isTokenProblem) {
+            renderApiKeyNotice(e);
+        }
         console.error(`[BattleMetrics Hour Summary] Error: ${e}`);
         console.error(e);
     } finally {

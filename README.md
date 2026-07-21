@@ -9,6 +9,19 @@ A browser extension to summarize a players hours on BattleMetrics.
 
 [![Youtube Demo](https://img.youtube.com/vi/k_Jnh_QnnqI/0.jpg)](https://www.youtube.com/watch?v=k_Jnh_QnnqI)
 
+### API token (required)
+
+BattleMetrics now requires an API token for the endpoints this extension uses.
+After installing:
+
+1. Create a token at [battlemetrics.com/developers](https://www.battlemetrics.com/developers)
+2. Open the extension popup (or its settings page) and paste the token into the
+   "BattleMetrics API token" field, then press "Save"
+3. Refresh the BattleMetrics page
+
+The token is stored in `storage.local`, so it stays on the machine and is never
+pushed to browser account sync.
+
 ### Installation
 
 #### Chrome/Opera/Brave/Edge:

@@ -1,5 +1,7 @@
 import browser from 'webextension-polyfill';
 import { extensionOptions } from '../shared/extensionOptions';
+import { BM_API_TOKEN_PAGE_URL } from '../shared/constants';
+import { getApiKey, setApiKey } from './apiKey';
 
 let statusTextTimeout: number | undefined;
 
@@ -46,6 +48,79 @@ export async function generateFormOptions(form: HTMLFormElement) {
 }
 
 /**
+ * Build the BattleMetrics API token field and wire up saving
+ *
+ * The BattleMetrics API requires a token, so this field is mandatory for the
+ * summary to render.
+ */
+export async function generateApiKeyField(container: HTMLElement) {
+    container.innerHTML = `
+        <label class="api-key-label" for="api-key-input">
+            BattleMetrics API token
+        </label>
+        <div class="api-key-row">
+            <input
+                type="password"
+                id="api-key-input"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Paste your token"
+            />
+            <button type="button" id="api-key-toggle" title="Show token">
+                Show
+            </button>
+            <button type="button" id="api-key-save">Save</button>
+        </div>
+        <p class="api-key-hint">
+            Required since BattleMetrics made their API token only. Create one
+            at
+            <a href="${BM_API_TOKEN_PAGE_URL}" target="_blank" rel="noopener noreferrer">
+                battlemetrics.com/developers
+            </a>.
+        </p>
+    `;
+
+    const input = container.querySelector('#api-key-input') as HTMLInputElement;
+    const toggle = container.querySelector(
+        '#api-key-toggle'
+    ) as HTMLButtonElement;
+    const save = container.querySelector('#api-key-save') as HTMLButtonElement;
+
+    input.value = await getApiKey();
+
+    toggle.addEventListener('click', () => {
+        const hidden = input.type === 'password';
+        input.type = hidden ? 'text' : 'password';
+        toggle.textContent = hidden ? 'Hide' : 'Show';
+        toggle.title = hidden ? 'Hide token' : 'Show token';
+    });
+
+    save.addEventListener('click', async () => {
+        try {
+            await setApiKey(input.value);
+            showStatusText(
+                input.value.trim() === ''
+                    ? 'Removed API token'
+                    : 'Saved API token, refresh page to take effect'
+            );
+        } catch (e) {
+            showErrorText('Failed to save API token, try again');
+            console.error(
+                `[BattleMetrics Hour Summary] Error saving API token: ${e}`
+            );
+        }
+    });
+
+    // Enter in the field saves too
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            save.click();
+        }
+    });
+}
+
+/**
  * Set version number from manifest.json
  */
 export function setVersionNumber() {
@@ -68,9 +143,9 @@ export async function handleFormChange(event: Event) {
         // Save setting in browser storage
         try {
             await browser.storage.sync.set({ [settingId]: isChecked });
-            showSavedText();
+            showStatusText('Saved settings, refresh page to take effect');
         } catch (e) {
-            showErrorText();
+            showErrorText('Failed to save settings, try again');
             console.error(
                 `[BattleMetrics Hour Summary] Error saving extension options: ${e}`
             );
@@ -79,23 +154,23 @@ export async function handleFormChange(event: Event) {
     }
 }
 
-// Show saved text with timeout on options page
-function showSavedText() {
+// Show status text with timeout on options page
+function showStatusText(text: string) {
     const status = document.getElementById(
         'status-text'
     ) as HTMLParagraphElement;
     status.classList.remove('error-text');
     clearTimeout(statusTextTimeout);
 
-    status.textContent = 'Saved settings, refresh page to take effect';
+    status.textContent = text;
 
     statusTextTimeout = setTimeout(() => {
         status.textContent = '';
-    }, 1500);
+    }, 2500);
 }
 
-// Show saved text with timeout on options page
-function showErrorText() {
+// Show error text with timeout on options page
+function showErrorText(text: string) {
     const status = document.getElementById(
         'status-text'
     ) as HTMLParagraphElement;
@@ -103,9 +178,9 @@ function showErrorText() {
 
     clearTimeout(statusTextTimeout);
 
-    status.textContent = 'Failed to save settings, try again';
+    status.textContent = text;
 
     statusTextTimeout = setTimeout(() => {
         status.textContent = '';
-    }, 1500);
+    }, 2500);
 }

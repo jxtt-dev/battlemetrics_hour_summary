@@ -3,11 +3,18 @@ import {
     setVersionNumber,
     handleFormChange,
     generateFormOptions,
+    generateApiKeyField,
     getExtensionOptions,
 } from './utils/extensionOptionHelpers';
 
 document.addEventListener('DOMContentLoaded', async () => {
     setVersionNumber();
+
+    // Render the BattleMetrics API token field
+    const apiKeySection = document.getElementById(
+        'api-key-section'
+    ) as HTMLDivElement;
+    await generateApiKeyField(apiKeySection);
 
     // Generate extension options form from shared/extensionOptions.ts
     const form = document.getElementById('options-form') as HTMLFormElement;

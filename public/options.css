@@ -43,6 +43,49 @@ h1, h2, label, a, p {
 .option-field input, .option-field label {
   cursor: pointer;
 }
+.api-key-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #3a3a3a;
+}
+.api-key-label {
+  font-weight: bold;
+}
+.api-key-row {
+  display: flex;
+  gap: 6px;
+}
+#api-key-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  color: #eeeeee;
+  background-color: #222;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.api-key-row button {
+  cursor: pointer;
+  padding: 6px 12px;
+  color: #eeeeee;
+  background-color: #333;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.api-key-row button:hover {
+  background-color: #3f3f3f;
+}
+.api-key-hint {
+  font-size: 12px;
+  color: #a9a9a9;
+}
+.api-key-hint a {
+  color: #a9a9a9;
+}
 .status-wrapper {
   align-self: center;
   margin-top: 20px;

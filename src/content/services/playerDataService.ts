@@ -5,7 +5,7 @@ import {
     GamePlaytimes,
 } from '../../shared/types';
 import { GLOBAL_STATE } from './globalState';
-import { fetchWithRateLimit } from '../../utils/fetchWithRateLimit';
+import { fetchFromBMApi } from '../../utils/bmApi';
 
 /**
  * Fetch player server data and past IDs
@@ -25,18 +25,11 @@ export async function fetchPlayerData(): Promise<
         '?' +
         new URLSearchParams({ include: 'server,identifier' }).toString();
 
-    const response = await fetchWithRateLimit(url);
-    if (!response.ok) {
-        throw new Error(
-            `BattleMetrics API Response status: ${response.status}`
-        );
-    }
-
-    const json = await response.json();
-    if (!('included' in json)) {
+    const json = (await fetchFromBMApi(url)) as Record<string, unknown>;
+    if (!json || !('included' in json)) {
         throw new Error(`BattleMetrics API returned incorrect data`);
     }
-    return json.included;
+    return json.included as (BMIdentifierRecord | BMServerRecord)[];
 }
 
 /**

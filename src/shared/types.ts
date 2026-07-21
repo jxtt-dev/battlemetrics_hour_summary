@@ -142,6 +142,31 @@ export interface GlobalStore {
 }
 
 /**
+ * Request sent from the content script to the background API proxy
+ */
+export interface BMApiRequestMessage {
+    type: string;
+    url: string;
+}
+
+/**
+ * Reason an API request failed, used to show actionable errors to the user
+ */
+export type BMApiErrorReason =
+    | 'missing-key'
+    | 'unauthorized'
+    | 'forbidden'
+    | 'network'
+    | 'bad-response';
+
+/**
+ * Response returned by the background API proxy
+ */
+export type BMApiResponseMessage =
+    | { ok: true; data: unknown }
+    | { ok: false; reason: BMApiErrorReason; status: number; message: string };
+
+/**
  * State for rate limit aware fetch
  */
 export interface RateLimitState {
