@@ -1,4 +1,5 @@
 import { ACTIVE_PLAYER_TABLE_CLASS } from '../../../shared/constants';
+import type { ExtensionOptionsState } from '../../../shared/extensionOptions';
 import { debounce } from '../../../utils/helpers';
 
 /**
@@ -20,38 +21,21 @@ const filterPlayerRows = (): number => {
     const activePlayersTableRows =
         activePlayersTable.getElementsByTagName('tr');
 
-    // Hide rows that don't match search term
-    const visibleRows = [];
-    const hiddenRows = [];
-
-    for (let i = 0; i < activePlayersTableRows.length; i++) {
-        // Skip the header
-        if (i === 0) {
-            continue;
-        }
-        const firstCell =
-            activePlayersTableRows[i].getElementsByTagName('td')[0];
-        if (!firstCell) {
-            continue;
-        }
-        const textValue = firstCell.textContent || firstCell.innerText;
-        const matchesFilter = textValue.toLowerCase().includes(filter);
-        if (matchesFilter) {
-            visibleRows.push(i);
-        } else {
-            hiddenRows.push(i);
-        }
+    let visibleCount = 0;
+    for (let i = 1; i < activePlayersTableRows.length; i++) {
+        const row = activePlayersTableRows[i];
+        const firstCell = row.getElementsByTagName('td')[0];
+        if (!firstCell) continue;
+        const textValue = (
+            firstCell.textContent ||
+            firstCell.innerText ||
+            ''
+        ).toLowerCase();
+        const matches = textValue.includes(filter);
+        row.style.display = matches ? '' : 'none';
+        if (matches) visibleCount++;
     }
-
-    // Apply layout changes separately to prevent forced reflow violations
-    for (const i of visibleRows) {
-        activePlayersTableRows[i].style.display = '';
-    }
-    for (const i of hiddenRows) {
-        activePlayersTableRows[i].style.display = 'none';
-    }
-
-    return visibleRows.length;
+    return visibleCount;
 };
 
 /**
@@ -81,6 +65,8 @@ function handlePlayerSearchInput(): void {
     displayMatchingPlayerCount(activePlayerSearchInput, matchingPlayerCount);
 }
 
+let playerTableObserver: MutationObserver | null = null;
+
 /**
  * MutationObserver to automatically filter new rows added to table
  */
@@ -101,6 +87,16 @@ const mutationCallback = function (mutationsList: MutationRecord[]) {
 };
 
 /**
+ * Removes existing player table observer if there is one
+ */
+export function removePlayerSearchObserver(): void {
+    if (playerTableObserver) {
+        playerTableObserver.disconnect();
+        playerTableObserver = null;
+    }
+}
+
+/**
  * Adds event listener player search input
  */
 export function addPlayerSearchListener(): void {
@@ -118,9 +114,12 @@ export function addPlayerSearchListener(): void {
     const debouncedPlayerSearchInput = debounce(handlePlayerSearchInput, 200);
     activePlayerSearchInput.oninput = debouncedPlayerSearchInput;
 
+    // Remove existing observer before creating a new one
+    removePlayerSearchObserver();
+
     // Create observer and start observing active player table childList
-    const observer = new MutationObserver(mutationCallback);
-    observer.observe(activePlayersTableBody, { childList: true });
+    playerTableObserver = new MutationObserver(mutationCallback);
+    playerTableObserver.observe(activePlayersTableBody, { childList: true });
 }
 
 /**
@@ -134,7 +133,7 @@ let searchShortcutListener: ((event: KeyboardEvent) => void) | null = null;
  * Default is forward slash, CTRL+F can be enabled in extension options
  */
 export function addSearchShortcutListener(
-    extensionOptions: Record<string, unknown>
+    extensionOptions: ExtensionOptionsState
 ): void {
     // Remove existing listener
     removeSearchShortcutListener();

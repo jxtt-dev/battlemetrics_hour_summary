@@ -128,11 +128,12 @@ function generateHeatmap(
     const monthsFragment = document.createDocumentFragment();
     let lastMonth = -1;
     dates.forEach((date, i) => {
-        const month = date.getMonth();
+        const month = date.getUTCMonth();
         if (month !== lastMonth) {
             const div = document.createElement('div');
             div.textContent = date.toLocaleString('default', {
                 month: 'short',
+                timeZone: 'UTC',
             });
             monthsFragment.appendChild(div);
             lastMonth = month;

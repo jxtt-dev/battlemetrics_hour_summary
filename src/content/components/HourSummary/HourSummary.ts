@@ -3,26 +3,33 @@ import {
     SERVERS_DIV_SELECTOR,
     PLAYER_PAGE_ID,
 } from '../../../shared/constants';
-import { generateSessionDurationString, waitForElement } from '../../../utils/helpers';
-import { getExtensionOptions } from '../../../utils/extensionOptionHelpers';
+import { FiberDataUnavailableError } from '../../../shared/types';
+import type { ExtensionOptionsState } from '../../../shared/extensionOptions';
+import {
+    generateSessionDurationString,
+    getCurrentSession,
+    waitForElement,
+} from '../../../utils/helpers';
+import {
+    getExtensionOptions,
+    isApiKeyConfigured,
+} from '../../../utils/extensionOptionHelpers';
 import { initPrevIdsHTML, populatePrevIdsHTML } from '../PreviousIds';
 import { generateTabButtons, generateGameTabs } from '../GameTab';
 
 import './HourSummary.css';
 
 /**
- * Init Hour Summary HTML, with loading state
+ * Ensure the hour summary wrapper exists in the DOM, creating it if missing.
+ *
+ * @returns the hour summary wrapper div
  */
-async function initSummaryHTML(): Promise<void> {
-    // Wait for active players table to render
-    await waitForElement(SERVERS_DIV_SELECTOR);
-    const serversDiv = document.querySelector(SERVERS_DIV_SELECTOR);
-    if (serversDiv === null || serversDiv.parentNode === null) {
-        throw new Error('Unable to find SERVERS_DIV_SELECTOR');
+function ensureHourSummaryWrapper(): HTMLDivElement {
+    const existing = document.getElementById('bmhs-hour-wrapper');
+    if (existing) {
+        return existing as HTMLDivElement;
     }
 
-    // Create document fragment and wrapper div for hour summary
-    const hourWrapperFragment = document.createDocumentFragment();
     const hourWrapperDiv = document.createElement('div');
     hourWrapperDiv.id = 'bmhs-hour-wrapper';
     hourWrapperDiv.className = 'row';
@@ -48,23 +55,46 @@ async function initSummaryHTML(): Promise<void> {
     `;
     hourWrapperDiv.appendChild(titleWrapper);
 
-    // Create inner div with loading state
+    // Create inner div to hold the summary content
     const summaryDiv = document.createElement('div');
     summaryDiv.id = 'bmhs-hour-summary';
-    summaryDiv.className = 'bmhs-loading-state';
-    summaryDiv.innerHTML = '<p>Loading Hour Summary...</p>';
     hourWrapperDiv.appendChild(summaryDiv);
 
-    // Insert fragment after details div
-    hourWrapperFragment.appendChild(hourWrapperDiv);
-    serversDiv.parentNode.insertBefore(hourWrapperFragment, serversDiv);
+    const serversDiv = document.querySelector(SERVERS_DIV_SELECTOR);
+    if (!serversDiv?.parentNode) {
+        throw new Error('Unable to find SERVERS_DIV_SELECTOR');
+    }
+    serversDiv.parentNode.insertBefore(hourWrapperDiv, serversDiv);
+
+    return hourWrapperDiv;
+}
+
+/**
+ * Init Hour Summary HTML, with loading state
+ */
+async function initSummaryHTML(): Promise<void> {
+    if (document.getElementById('bmhs-hour-wrapper')) {
+        return;
+    }
+    // Wait for active players table to render
+    await waitForElement(SERVERS_DIV_SELECTOR);
+
+    const hourWrapperDiv = ensureHourSummaryWrapper();
+    const summaryDiv = hourWrapperDiv.querySelector(
+        '#bmhs-hour-summary'
+    ) as HTMLDivElement | null;
+    if (summaryDiv === null) {
+        throw new Error('Unable to find bmhs-hour-summary');
+    }
+    summaryDiv.className = 'bmhs-loading-state';
+    summaryDiv.innerHTML = '<p>Loading Hour Summary...</p>';
 }
 
 /**
  * Populate summary HTML with data
  */
 async function populateSummaryHTML(
-    extensionOptions: Record<string, unknown>,
+    extensionOptions: ExtensionOptionsState,
     sessionDataReady: Promise<void>
 ): Promise<void> {
     if (Object.keys(GLOBAL_STATE.gamePlaytime).length === 0) {
@@ -75,7 +105,7 @@ async function populateSummaryHTML(
     const summaryDiv = document.getElementById('bmhs-hour-summary');
     if (summaryDiv === null) {
         console.error(
-            '[Battlemetrics Hour Summary] Cannot find Hour Summary div'
+            '[BattleMetrics Hour Summary] Cannot find Hour Summary div'
         );
         throw new Error('Hour Summary HTML is malformed');
     }
@@ -85,7 +115,7 @@ async function populateSummaryHTML(
         summaryDiv.style.display = 'none';
 
         console.error(
-            '[Battlemetrics Hour Summary] No server data found, cannot render hour summary.'
+            '[BattleMetrics Hour Summary] No server data found, cannot render hour summary.'
         );
         return;
     }
@@ -94,15 +124,41 @@ async function populateSummaryHTML(
     summaryDiv.classList.toggle('bmhs-loading-state');
     summaryDiv.innerHTML = '';
 
+    const hasApiKey = await isApiKeyConfigured();
+
     // Add tab buttons for each game
     generateTabButtons();
 
     // Add tab content for each game
-    generateGameTabs();
+    generateGameTabs(hasApiKey);
 
     // Add current session duration if not in compact mode
     if (!extensionOptions['playerPageCompactMode']) {
         await renderCurrentSessionDuration(sessionDataReady);
+    }
+}
+
+async function updateCurrentSessionDuration(
+    currentSessionTitle: HTMLElement,
+    currentSessionValue: HTMLElement,
+    sessionDataReady: Promise<void>
+): Promise<void> {
+    try {
+        await sessionDataReady;
+        if (GLOBAL_STATE.sessionData === null) return;
+        const currentSession = getCurrentSession(GLOBAL_STATE.sessionData);
+        if (currentSession === null) {
+            currentSessionTitle.style.display = 'none';
+            currentSessionValue.style.display = 'none';
+            return;
+        }
+
+        currentSessionValue.textContent = generateSessionDurationString(
+            currentSession.attributes.start
+        );
+    } catch {
+        currentSessionTitle.style.display = 'none';
+        currentSessionValue.style.display = 'none';
     }
 }
 
@@ -114,7 +170,7 @@ async function renderCurrentSessionDuration(
 ): Promise<void> {
     const playerPage = document.getElementById(
         PLAYER_PAGE_ID
-    ) as HTMLDivElement;
+    ) as HTMLDivElement | null;
     if (playerPage === null) {
         throw new Error('Unable to find PLAYER_PAGE_ID');
     }
@@ -154,73 +210,61 @@ async function renderCurrentSessionDuration(
     descriptionList.appendChild(currentSessionValue);
 
     // Set session duration text once session data is ready
-    await sessionDataReady;
-    if (GLOBAL_STATE.sessionData === null) {
-        throw new Error('sessionData not found in GLOBAL_STATE');
-    }
-    const sessionData = GLOBAL_STATE.sessionData;
-
-    // In rare cases, there can be multiple current sessions
-    // Remove placeholder if there is more than a single current session
-    let currentSessionCount = 0;
-    let currentSessionIndex = -1;
-
-    for (let i = 0; i < sessionData.data.length; i++) {
-        if (sessionData.data[i].attributes.stop === null) {
-            currentSessionCount++;
-            if (currentSessionCount > 1) {
-                currentSessionTitle.style.display = 'none';
-                currentSessionValue.style.display = 'none';
-                return;
-            }
-            currentSessionIndex = i;
-        }
-    }
-    if (currentSessionIndex === -1) {
-        currentSessionTitle.style.display = 'none';
-        currentSessionValue.style.display = 'none';
-        return;
-    }
-
-    // Update currentSessionValue
-    const currentSessionStart =
-        sessionData.data[currentSessionIndex].attributes.start;
-    currentSessionValue.textContent =
-        generateSessionDurationString(currentSessionStart);
+    updateCurrentSessionDuration(
+        currentSessionTitle,
+        currentSessionValue,
+        sessionDataReady
+    );
 }
 
 /**
- * Render generic error message
+ * Render an error state into the hour summary area
  */
-function renderError(): void {
-    const summaryDiv = document.getElementById('bmhs-hour-summary');
+export function renderError(error?: unknown): void {
+    const hourWrapperDiv = ensureHourSummaryWrapper();
+
+    const summaryDiv = hourWrapperDiv.querySelector('#bmhs-hour-summary');
     if (summaryDiv === null) {
         return;
     }
-    summaryDiv.classList.add('bmhs-loading-state');
-    summaryDiv.innerHTML = '<p>Error generating Hour Summary</p>';
+    summaryDiv.classList.remove('bmhs-loading-state');
+    summaryDiv.classList.add('bmhs-error-state');
+
+    const message = document.createElement('p');
+    if (error instanceof FiberDataUnavailableError) {
+        message.textContent =
+            'Unable to extract player data from page state — reload to try again.';
+        const reloadBtn = document.createElement('button');
+        reloadBtn.textContent = 'Reload';
+        reloadBtn.addEventListener('click', () => window.location.reload());
+        summaryDiv.replaceChildren(message, reloadBtn);
+    } else {
+        message.textContent = 'Error generating Hour Summary.';
+        summaryDiv.replaceChildren(message);
+    }
 }
 
 /**
  * Render all components on hour summary page
+ *
+ * Errors are handled by the caller (content.ts), which renders the error state
  */
 export async function render(sessionDataReady: Promise<void>): Promise<void> {
-    try {
-        // Setup HTML with loading state
-        await initSummaryHTML();
-        initPrevIdsHTML();
+    // Setup HTML with loading state
+    await initSummaryHTML();
 
-        // Fetch extension options for compact mode
-        const extensionOptions = await getExtensionOptions();
+    // Fetch extension options
+    const extensionOptions = await getExtensionOptions();
+    const hasApiKey = await isApiKeyConfigured();
 
-        // Populate hour summary, previous ids with fetched data
+    // Initialize previous identifiers link (grayed out and disabled if no API key)
+    initPrevIdsHTML(hasApiKey);
+
+    // Populate previous identifiers if API key is present and identifiers exist
+    if (hasApiKey && GLOBAL_STATE.identifierData.length > 0) {
         populatePrevIdsHTML();
-        await populateSummaryHTML(extensionOptions, sessionDataReady);
-    } catch (e) {
-        console.error(
-            `[BattleMetrics Hour Summary] Error rendering hour summary: ${e}`
-        );
-        console.error(e);
-        renderError();
     }
+
+    // Populate hour summary with fetched data
+    await populateSummaryHTML(extensionOptions, sessionDataReady);
 }

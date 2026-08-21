@@ -1,1 +1,1 @@
-export { render } from './HourSummary';
+export { render, renderError } from './HourSummary';

@@ -1,4 +1,8 @@
-import { BMSessionRecord, BMServerRecord } from '../shared/types';
+import {
+    PLAYER_OVERVIEW_PAGE_REGEX,
+    SERVER_PAGE_REGEX,
+} from '../shared/constants';
+import { BMSessionRecord, BMServerRecord, SessionData } from '../shared/types';
 import { GAME_NAME_MAPPING } from '../shared/gameNameMapping';
 
 /**
@@ -43,7 +47,6 @@ export function waitForElement<T extends Element>(
     timeout = 5000
 ): Promise<T> {
     return new Promise((resolve, reject) => {
-        // Already present — resolve immediately
         const existing = document.querySelector<T>(selector);
         if (existing) {
             resolve(existing);
@@ -73,6 +76,13 @@ export function waitForElement<T extends Element>(
             subtree: true,
         });
     });
+}
+
+/**
+ * Check if a gameId contains only letters and digits
+ */
+export function isValidGameId(gameId: string): boolean {
+    return /^[a-z0-9]+$/i.test(gameId);
 }
 
 /**
@@ -111,11 +121,45 @@ export function generateSessionDurationString(
 }
 
 /**
+ * Convert a timestamp (epoch ms number or string) to an ISO string
+ */
+export function toIsoString(value: string | number): string {
+    return typeof value === 'number'
+        ? new Date(value).toISOString()
+        : String(value);
+}
+
+/**
+ * Check if URL is a Player Overview page (e.g. /players/12345)
+ */
+export function isPlayerOverviewPage(currentURL: string): boolean {
+    try {
+        const url = new URL(currentURL);
+        return PLAYER_OVERVIEW_PAGE_REGEX.test(url.pathname);
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Check if URL is a Server page (e.g. /servers/...)
+ */
+export function isServerPage(currentURL: string): boolean {
+    try {
+        const url = new URL(currentURL);
+        return SERVER_PAGE_REGEX.test(url.pathname);
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Extract player ID from currentURL
  */
 export function extractPlayerId(currentURL: string): string {
     const url = new URL(currentURL);
-    return url.pathname.replace('/players/', '');
+    const match = url.pathname.match(/\/players\/(\d+)/);
+    return match ? match[1] : '';
 }
 
 /**
@@ -137,6 +181,28 @@ export function dedupeIncluded(included: BMServerRecord[]): BMServerRecord[] {
         seen.add(x.id);
         return true;
     });
+}
+
+/**
+ * Return the single ongoing session (stop === null), or null if there is none
+ * or multiple ongoing sessions
+ */
+export function getCurrentSession(
+    sessionData: SessionData
+): BMSessionRecord | null {
+    let currentSession: BMSessionRecord | null = null;
+    let currentSessionCount = 0;
+
+    for (const session of sessionData.data) {
+        if (session.attributes.stop !== null) continue;
+        currentSessionCount++;
+        if (currentSessionCount > 1) {
+            return null;
+        }
+        currentSession = session;
+    }
+
+    return currentSession;
 }
 
 /**

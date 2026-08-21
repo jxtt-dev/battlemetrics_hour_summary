@@ -10,7 +10,7 @@ export let GLOBAL_STATE: GlobalStore = {
     gamePlaytime: {},
     dailyPlaytime: {},
     sessionData: null,
-    graphType: false, // Default to bar graph
+    graphType: 'bar',
 };
 
 /**
@@ -24,6 +24,6 @@ export function resetState(): void {
         gamePlaytime: {},
         dailyPlaytime: {},
         sessionData: null,
-        graphType: false, // Default to bar graph
+        graphType: 'bar',
     };
 }

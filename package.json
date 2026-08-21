@@ -1,6 +1,6 @@
 {
   "name": "battlemetrics_hour_summary",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Summarizes player hours on BattleMetrics.",
   "author": "jxtt-dev",
   "license": "MIT",
@@ -10,6 +10,8 @@
     "typecheck": "tsc",
     "build": "node build.mjs",
     "build:prod": "node build.mjs --prod",
+    "build:firefox": "node build.mjs --firefox",
+    "build:firefox:prod": "node build.mjs --firefox --prod",
     "check": "tsc && node build.mjs"
   },
   "devDependencies": {

@@ -1,2 +1,5 @@
 export { render } from './PlayerSearch';
-export { removeSearchShortcutListener } from './PlayerSearch.logic';
+export {
+    removePlayerSearchObserver,
+    removeSearchShortcutListener,
+} from './PlayerSearch.logic';

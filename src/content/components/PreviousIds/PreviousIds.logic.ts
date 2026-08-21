@@ -48,40 +48,26 @@ export function addPrevIdSearchListener(): void {
 
     // Filter previous ids by search value
     const filterPreviousIds = () => {
-        const inputValue = previousIDSearchInput.value;
-        const filter = inputValue.toLowerCase();
-
-        // Hide ids that don't match search term
-        const visibleIds = [];
-        const hiddenIds = [];
+        const filter = previousIDSearchInput.value.toLowerCase();
+        let visibleCount = 0;
 
         for (let i = 0; i < previousIds.length; i++) {
-            const previousIdName = previousIds[i].getElementsByTagName('b')[0];
-            const textValue =
-                previousIdName.textContent || previousIdName.innerText;
-            const matchesFilter = textValue.toLowerCase().includes(filter);
-
-            if (matchesFilter) {
-                visibleIds.push(i);
-            } else {
-                hiddenIds.push(i);
-            }
+            const item = previousIds[i];
+            const nameEl = item.getElementsByTagName('b')[0];
+            const textValue = (
+                nameEl?.textContent ||
+                nameEl?.innerText ||
+                ''
+            ).toLowerCase();
+            const matches = textValue.includes(filter);
+            item.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
         }
 
-        // Set matched identifier count
-        if (previousIDSearchInput.value === '') {
-            prevIdCount.innerText = `${previousIds.length}`;
-        } else {
-            prevIdCount.innerText = `${visibleIds.length} / ${previousIds.length}`;
-        }
-
-        // Apply layout changes separately to prevent forced reflow violations
-        for (const i of visibleIds) {
-            previousIds[i].style.display = '';
-        }
-        for (const i of hiddenIds) {
-            previousIds[i].style.display = 'none';
-        }
+        prevIdCount.innerText =
+            previousIDSearchInput.value === ''
+                ? `${previousIds.length}`
+                : `${visibleCount} / ${previousIds.length}`;
     };
 
     // Add oninput listener with 200ms debounce
