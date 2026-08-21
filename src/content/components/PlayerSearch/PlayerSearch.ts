@@ -1,4 +1,5 @@
 import { ACTIVE_PLAYER_TABLE_CLASS } from '../../../shared/constants';
+import type { ExtensionOptionsState } from '../../../shared/extensionOptions';
 import { waitForElement } from '../../../utils/helpers';
 import {
     addPlayerSearchListener,
@@ -7,7 +8,9 @@ import {
 
 import './PlayerSearch.css';
 
-async function initPlayerSearchHTML(extensionOptions: Record<string, unknown>): Promise<void> {
+async function initPlayerSearchHTML(
+    extensionOptions: ExtensionOptionsState
+): Promise<void> {
     // Prevent double rendering
     const existingWrapper = document.getElementById(
         'bmhs-player-title-wrapper'
@@ -65,7 +68,7 @@ async function initPlayerSearchHTML(extensionOptions: Record<string, unknown>): 
     activePlayerTitleWrapper.append(searchWrapper);
 }
 
-export async function render(extensionOptions: Record<string, unknown>) {
+export async function render(extensionOptions: ExtensionOptionsState) {
     try {
         await initPlayerSearchHTML(extensionOptions);
         addPlayerSearchListener();

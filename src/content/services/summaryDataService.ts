@@ -1,11 +1,8 @@
 import { BMIdentifierRecord, BMServerRecord } from '../../shared/types';
-import { GLOBAL_STATE } from '../services';
+import { GLOBAL_STATE } from './globalState';
 import { extractPlayerId } from '../../utils/helpers';
-import {
-    fetchPlayerData,
-    fetchSessionData,
-    calculateGamePlaytimes,
-} from '../services';
+import { fetchPlayerData, calculateGamePlaytimes } from './playerDataService';
+import { fetchSessionData } from './sessionService';
 
 function fetchAndSetPlayerId(): void {
     const playerID = extractPlayerId(window.location.href);
@@ -27,22 +24,19 @@ export async function fetchAndStoreHourSummaryData(): Promise<void> {
     }
 
     // Split server data and previous identifier data, then store in GLOBAL_STATE
-    const reducedPlayerData = playerData.reduce(
-        (acc, record) => {
-            if (record.type === 'server') {
-                acc.server.push(record as BMServerRecord);
-            } else {
-                acc.identifier.push(record as BMIdentifierRecord);
-            }
-            return acc;
-        },
-        {
-            server: [] as BMServerRecord[],
-            identifier: [] as BMIdentifierRecord[],
+    const serverData: BMServerRecord[] = [];
+    const identifierData: BMIdentifierRecord[] = [];
+
+    for (const record of playerData) {
+        if (record.type === 'server') {
+            serverData.push(record);
+        } else if (record.type === 'identifier') {
+            identifierData.push(record);
         }
-    );
-    GLOBAL_STATE.serverData = reducedPlayerData['server'];
-    GLOBAL_STATE.identifierData = reducedPlayerData['identifier'];
+    }
+
+    GLOBAL_STATE.serverData = serverData;
+    GLOBAL_STATE.identifierData = identifierData;
 
     // Calculate hour summary
     GLOBAL_STATE.gamePlaytime = calculateGamePlaytimes();

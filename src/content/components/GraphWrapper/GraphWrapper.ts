@@ -181,11 +181,10 @@ export function addGraphWrapper(
     const heatmapGraphWrapper = document.createElement('div');
     heatmapGraphWrapper.id = `${gameId}-playtime-heatmap-graph-wrapper`;
 
-    // GLOBAL_STATE.graphType: false = bar graph, true = heatmap
-    barGraphWrapper.style.display = GLOBAL_STATE.graphType ? 'none' : 'block';
-    heatmapGraphWrapper.style.display = GLOBAL_STATE.graphType
-        ? 'block'
-        : 'none';
+    barGraphWrapper.style.display =
+        GLOBAL_STATE.graphType === 'bar' ? 'block' : 'none';
+    heatmapGraphWrapper.style.display =
+        GLOBAL_STATE.graphType === 'heatmap' ? 'block' : 'none';
 
     playtimeGraphWrapper.appendChild(barGraphWrapper);
     playtimeGraphWrapper.appendChild(heatmapGraphWrapper);

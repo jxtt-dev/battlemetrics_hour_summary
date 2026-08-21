@@ -130,11 +130,9 @@ function ChartistTooltip() {
         }
 
         chart.on('created', function () {
-            const existingTooltips =
-                document.getElementsByClassName('bmhs-ct-tooltip');
-            while (existingTooltips.length > 0) {
-                existingTooltips[0].remove();
-            }
+            document
+                .querySelectorAll('.bmhs-ct-tooltip')
+                .forEach((el) => el.remove());
 
             tooltip = document.createElement('div');
             tooltip.className = 'bmhs-ct-tooltip';

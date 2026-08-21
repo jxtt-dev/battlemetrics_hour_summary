@@ -34,15 +34,14 @@ export function toggleGraphTypeListener(event: Event, gameId: string): void {
         `${gameId}-playtime-heatmap-graph-wrapper`
     ) as HTMLDivElement;
 
-    // Checked = heatmap
-    if ((event.target as HTMLInputElement).checked) {
-        GLOBAL_STATE.graphType = true;
+    GLOBAL_STATE.graphType = (event.target as HTMLInputElement).checked
+        ? 'heatmap'
+        : 'bar';
+
+    if (GLOBAL_STATE.graphType === 'heatmap') {
         barGraphWrapper.style.display = 'none';
         heatmapGraphWrapper.style.display = 'block';
-    }
-    // Unchecked = bar graph
-    else {
-        GLOBAL_STATE.graphType = false;
+    } else {
         barGraphWrapper.style.display = 'block';
         heatmapGraphWrapper.style.display = 'none';
     }

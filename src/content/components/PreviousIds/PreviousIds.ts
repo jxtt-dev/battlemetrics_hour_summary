@@ -10,7 +10,10 @@ import './PreviousIds.css';
 /**
  * Init Previous Identifier HTML
  */
-export function initPrevIdsHTML(): void {
+export function initPrevIdsHTML(hasApiKey = true): void {
+    if (document.getElementById('bmhs-prev-ids-wrapper')) {
+        return;
+    }
     const usernameDiv = document.querySelector(USERNAME_SELECTOR);
     if (usernameDiv === null || usernameDiv.parentNode === null) {
         throw new Error('Unable to find USERNAME_SELECTOR');
@@ -22,22 +25,35 @@ export function initPrevIdsHTML(): void {
     prevIdsWrapperDiv.id = 'bmhs-prev-ids-wrapper';
     prevIdsWrapperDiv.className = 'row';
 
-    prevIdsWrapperDiv.innerHTML = `
-        <input id="bmhs-prev-ids-show-more" type="checkbox">
-        <label id="bmhs-show-ids-label" for="bmhs-prev-ids-show-more">
-            Show previous identifiers
-        </label>
+    if (!hasApiKey) {
+        prevIdsWrapperDiv.innerHTML = `
+            <input id="bmhs-prev-ids-show-more" type="checkbox" disabled>
+            <label
+                id="bmhs-show-ids-label"
+                class="bmhs-disabled"
+                title="Viewing previous identifiers requires a BattleMetrics API key. View the options page for more information."
+            >
+                Show previous identifiers
+            </label>
+        `;
+    } else {
+        prevIdsWrapperDiv.innerHTML = `
+            <input id="bmhs-prev-ids-show-more" type="checkbox">
+            <label id="bmhs-show-ids-label" for="bmhs-prev-ids-show-more">
+                Show previous identifiers
+            </label>
 
-        <div id="bmhs-ids-div">
-            <div id="bmhs-prev-id-title-wrapper">
-                <div>
-                    <h4 id="bmhs-prev-id-title">Previous Identifiers</h4>
-                    <h6 id="bmhs-prev-id-count"></h6>
+            <div id="bmhs-ids-div">
+                <div id="bmhs-prev-id-title-wrapper">
+                    <div>
+                        <h4 id="bmhs-prev-id-title">Previous Identifiers</h4>
+                        <h6 id="bmhs-prev-id-count"></h6>
+                    </div>
+                    <input id="bmhs-prev-id-search" class="form-control" type="search" placeholder="Search previous identifiers..."/>
                 </div>
-                <input id="bmhs-prev-id-search" class="form-control" type="search" placeholder="Search previous identifiers..."/>
             </div>
-        </div>
-    `;
+        `;
+    }
 
     prevIdsWrapperFragment.appendChild(prevIdsWrapperDiv);
 
@@ -83,14 +99,18 @@ export function populatePrevIdsHTML(): void {
         const lastSeenDate = new Date(
             Date.parse(identifier.attributes.lastSeen)
         );
-        const lastSeenText = lastSeenDateFormatter.format(lastSeenDate);
+        const formattedLastSeen = lastSeenDateFormatter.format(lastSeenDate);
 
         const identifierDiv = document.createElement('div');
         identifierDiv.className = 'bmhs-prev-id';
-        identifierDiv.innerHTML = `
-            <b>${identifier.attributes.identifier}</b>
-            <p title="Last Seen">${lastSeenText}</p>
-        `;
+
+        const identifierName = document.createElement('b');
+        identifierName.textContent = identifier.attributes.identifier;
+        const lastSeenText = document.createElement('p');
+        lastSeenText.title = 'Last Seen';
+        lastSeenText.textContent = formattedLastSeen;
+
+        identifierDiv.append(identifierName, lastSeenText);
 
         // Add previous identifier div to fragment
         prevIdsFragment.appendChild(identifierDiv);

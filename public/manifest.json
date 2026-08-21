@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "BattleMetrics Hour Summary",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "author": "jxtt-dev",
     "description": "Summarizes player hours on BattleMetrics.",
     "homepage_url": "https://github.com/jxtt-dev/battlemetrics_hour_summary",
@@ -10,14 +10,23 @@
         "128": "images/icon128.png"
     },
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "popup/popup.html",
         "default_icon": "images/icon48.png"
     },
     "options_ui": {
-        "page": "options.html",
+        "page": "options/options.html",
         "open_in_tab": true
     },
+    "background": {
+        "service_worker": "background.js"
+    },
     "content_scripts": [
+        {
+            "matches": ["https://www.battlemetrics.com/*"],
+            "js": ["main.js"],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
         {
             "matches": ["https://www.battlemetrics.com/*"],
             "js": ["content.js"],
@@ -25,10 +34,14 @@
         }
     ],
     "permissions": ["storage"],
-    "host_permissions": ["https://api.battlemetrics.com/*"],
+    "host_permissions": [
+        "https://api.battlemetrics.com/*",
+        "https://www.battlemetrics.com/*"
+    ],
     "browser_specific_settings": {
         "gecko": {
-            "id": "battlemetrics-hour-summary@jxtt-dev.me"
+            "id": "battlemetrics-hour-summary@jxtt-dev.me",
+            "strict_min_version": "128.0"
         }
     }
 }

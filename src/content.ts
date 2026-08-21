@@ -1,19 +1,19 @@
 import {
-    PLAYER_PAGE_URL,
-    PLAYER_PAGE_ID,
-    SERVER_PAGE_URL,
-    ACTIVE_PLAYER_TABLE_CLASS,
-} from './shared/constants';
-import {
     resetState,
     fetchAndStoreHourSummaryData,
     fetchAndStoreSessionData,
 } from './content/services';
 import { getExtensionOptions } from './utils/extensionOptionHelpers';
+import { initFiberDataManager } from './utils/fiberDataManager';
+import { isPlayerOverviewPage, isServerPage } from './utils/helpers';
 import { compactPlayerPage } from './content/components/CompactPlayerPage';
-import { render as renderHourSummary } from './content/components/HourSummary';
+import {
+    render as renderHourSummary,
+    renderError,
+} from './content/components/HourSummary';
 import {
     render as renderPlayerSearch,
+    removePlayerSearchObserver,
     removeSearchShortcutListener,
 } from './content/components/PlayerSearch';
 
@@ -23,25 +23,52 @@ import './shared/global.css';
 let lastHandledUrl: string | null = null;
 let isRendering = false;
 
+// Outcome of the last render attempt for lastHandledUrl
+let renderStatus: 'none' | 'rendered' | 'error' = 'none';
+
 /**
- * Initialize MutationObserver for page, using page title
+ * True if the page content for the given URL is already rendered.
+ * Non-relevant pages are treated as rendered, since nothing needs to be done.
  */
-function addLocationObserver(callback: MutationCallback) {
-    // Options for the observer (which mutations to observe)
-    const config = { attributes: false, childList: true, subtree: false };
-
-    // Create an observer instance linked to the callback function
-    const observer = new MutationObserver(callback);
-
-    // Start observing page title for mutations
-    const titleElement: HTMLTitleElement | null =
-        document.querySelector('head > title');
-
-    if (!titleElement) {
-        console.error('[BattleMetrics Hour Summary] Title element not found.');
-        return;
+function isAlreadyRendered(currentUrl: string): boolean {
+    if (isPlayerOverviewPage(currentUrl)) {
+        return (
+            renderStatus === 'rendered' &&
+            document.getElementById('bmhs-hour-wrapper') !== null
+        );
     }
-    observer.observe(titleElement, config);
+    if (isServerPage(currentUrl)) {
+        return (
+            renderStatus === 'rendered' &&
+            document.getElementById('bmhs-player-search') !== null
+        );
+    }
+    return true;
+}
+
+/**
+ * Initialize MutationObserver for page, watching URL changes and DOM mount
+ */
+function addLocationObserver(callback: () => void) {
+    const observer = new MutationObserver(() => {
+        const currentUrl = window.location.href;
+        if (currentUrl !== lastHandledUrl) {
+            callback();
+        } else if (
+            !isRendering &&
+            renderStatus !== 'error' &&
+            !isAlreadyRendered(currentUrl)
+        ) {
+            callback();
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    const titleElement = document.querySelector('head > title');
+    if (titleElement) {
+        observer.observe(titleElement, { childList: true });
+    }
 }
 
 /**
@@ -49,48 +76,58 @@ function addLocationObserver(callback: MutationCallback) {
  */
 async function handleLocationChange(): Promise<void> {
     try {
-        // Prevent duplicate rendering for same URL or while rendering
         const currentUrl = window.location.href;
-        if (isRendering || currentUrl === lastHandledUrl) return;
+        if (isRendering) return;
+
+        // Skip if already rendered for this URL
+        if (currentUrl === lastHandledUrl && isAlreadyRendered(currentUrl)) {
+            return;
+        }
+
         isRendering = true;
         lastHandledUrl = currentUrl;
+        renderStatus = 'none';
 
         // Reset data store
         resetState();
 
-        // Remove search shortcut listener
+        // Remove search shortcut listener and player table observer
         removeSearchShortcutListener();
+        removePlayerSearchObserver();
 
         const extensionOptions = await getExtensionOptions();
 
-        // Player summary page
-        if (
-            window.location.href.startsWith(PLAYER_PAGE_URL) &&
-            !document.getElementById('bmhs-hour-wrapper')
-        ) {
-            // Fetch initial server, identifier data then store in GLOBAL_STATE
+        // Player overview page
+        if (isPlayerOverviewPage(currentUrl)) {
             const summaryDataPromise = fetchAndStoreHourSummaryData();
             const sessionDataPromise = fetchAndStoreSessionData();
 
-            // Await summaryDataPromise first, as it generally resolves faster
-            // sessionDataPromise will be awaited closer to the UI elements that need it
-            // to prevent the slower request from blocking UI rendering
-            await summaryDataPromise;
+            try {
+                await summaryDataPromise;
 
-            if (extensionOptions['playerPageCompactMode']) {
-                await compactPlayerPage(sessionDataPromise);
+                if (extensionOptions['playerPageCompactMode']) {
+                    await compactPlayerPage(sessionDataPromise);
+                }
+
+                // Render Hour Summary page
+                await renderHourSummary(sessionDataPromise);
+                renderStatus = 'rendered';
+                console.log(
+                    '[BattleMetrics Hour Summary] Finished generating summary'
+                );
+            } catch (e) {
+                renderStatus = 'error';
+                console.error(
+                    `[BattleMetrics Hour Summary] Error rendering player page: ${e}`
+                );
+                console.error(e);
+                renderError(e);
             }
-
-            // Render Hour Summary page
-            await renderHourSummary(sessionDataPromise);
-            console.log('[BattleMetrics Hour Summary] Finished generating summary');
         }
         // Server page
-        else if (
-            window.location.href.startsWith(SERVER_PAGE_URL) &&
-            !document.getElementById('bmhs-player-search')
-        ) {
+        else if (isServerPage(currentUrl)) {
             await renderPlayerSearch(extensionOptions);
+            renderStatus = 'rendered';
             console.log('[BattleMetrics Hour Summary] Added player search bar');
         }
     } catch (e) {
@@ -103,7 +140,10 @@ async function handleLocationChange(): Promise<void> {
 
 (async () => {
     try {
+        initFiberDataManager();
+
         addLocationObserver(handleLocationChange);
+        window.addEventListener('popstate', () => handleLocationChange());
         await handleLocationChange();
     } catch (e) {
         console.error(`[BattleMetrics Hour Summary] Startup error: ${e}`);

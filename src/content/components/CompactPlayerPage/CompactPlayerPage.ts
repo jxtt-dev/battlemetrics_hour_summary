@@ -1,31 +1,20 @@
 import { GLOBAL_STATE } from '../../services';
 import { SessionData } from '../../../shared/types';
-import { generateSessionDurationString, waitForElement } from '../../../utils/helpers';
+import {
+    generateSessionDurationString,
+    getCurrentSession,
+    waitForElement,
+} from '../../../utils/helpers';
 
 import './CompactPlayerPage.css';
 
 function getSessionDurationString(sessionData: SessionData): string {
-    // In rare cases, there can be multiple current sessions
-    // Only render a if there is a single current session
-    let currentSessionCount = 0;
-    let currentSessionIndex = -1;
-
-    for (let i = 0; i < sessionData.data.length; i++) {
-        if (sessionData.data[i].attributes.stop === null) {
-            currentSessionCount++;
-            if (currentSessionCount > 1) {
-                return '';
-            }
-            currentSessionIndex = i;
-        }
-    }
-    if (currentSessionIndex === -1) {
+    const currentSession = getCurrentSession(sessionData);
+    if (currentSession === null) {
         return '';
     }
 
-    const currentSessionStart =
-        sessionData.data[currentSessionIndex].attributes.start;
-    return generateSessionDurationString(currentSessionStart);
+    return generateSessionDurationString(currentSession.attributes.start);
 }
 
 /**
@@ -33,6 +22,9 @@ function getSessionDurationString(sessionData: SessionData): string {
  */
 export async function compactPlayerPage(sessionDataReady: Promise<void>) {
     try {
+        if (document.querySelector('.bmhs-compact-details-wrapper')) {
+            return;
+        }
         await waitForElement('#PlayerPage');
         const playerPage = document.getElementById('PlayerPage');
         if (!playerPage) {
@@ -120,14 +112,12 @@ export async function compactPlayerPage(sessionDataReady: Promise<void>) {
             const sessionDurationText = sessionDurationRow.querySelector(
                 'p'
             ) as HTMLElement;
-            // Await session data here to prevent other UI from being blocked
             await sessionDataReady;
-            if (GLOBAL_STATE.sessionData === null) {
-                throw new Error('sessionData not found in GLOBAL_STATE');
+            if (GLOBAL_STATE.sessionData !== null) {
+                sessionDurationText.textContent = getSessionDurationString(
+                    GLOBAL_STATE.sessionData
+                );
             }
-            const sessionData = GLOBAL_STATE.sessionData;
-            sessionDurationText.innerHTML =
-                getSessionDurationString(sessionData);
         } else {
             sessionDurationRow.style.display = 'none';
         }

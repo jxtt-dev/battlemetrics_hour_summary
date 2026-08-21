@@ -20,7 +20,12 @@ export function generateTopServersList(gameId: string): DocumentFragment {
     const topServersListFragment = document.createDocumentFragment();
     gameServerList.slice(0, 20).forEach((server) => {
         const serverEntry = document.createElement('li');
-        serverEntry.innerHTML += `${server.serverName} — <b>${server.serverPlayTime} hrs</b>`;
+        serverEntry.append(
+            document.createTextNode(`${server.serverName} — `),
+            Object.assign(document.createElement('b'), {
+                textContent: `${server.serverPlayTime} hrs`,
+            })
+        );
         topServersListFragment.appendChild(serverEntry);
     });
 
