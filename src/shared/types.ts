@@ -165,7 +165,7 @@ export interface RateLimitState {
 }
 
 /**
- * Raw server-playtime record as stored in Redux players.serverInfo[playerId]
+ * Raw server-playtime record as stored in data store players.serverInfo[playerId]
  */
 export interface RawPlayerServerInfo {
     serverId: string | number;
@@ -177,7 +177,7 @@ export interface RawPlayerServerInfo {
 }
 
 /**
- * Raw server record as stored in Redux servers.servers[serverId]
+ * Raw server record as stored in data store servers.servers[serverId]
  */
 export interface RawServerInfo {
     id: string | number;
@@ -191,7 +191,7 @@ export interface RawServerInfo {
 }
 
 /**
- * Raw session record as stored in Redux sessions.sessions[sessionId]
+ * Raw session record as stored in data store sessions.sessions[sessionId]
  */
 export interface RawSessionInfo {
     id: string;
@@ -206,7 +206,7 @@ export interface RawSessionInfo {
 }
 
 /**
- * Payload of player, server, and session data extracted from Redux store
+ * Payload of player, server, and session data extracted from data store
  */
 export interface FiberPlayerDataPayload {
     serverInfoByPlayer: Record<string, Record<string, RawPlayerServerInfo>>;
@@ -222,7 +222,7 @@ export interface FiberDataRelayMessage {
 }
 
 /**
- * Thrown when no BattleMetrics player data could be captured from the Redux store
+ * Thrown when no BattleMetrics player data could be captured from the data store
  */
 export class FiberDataUnavailableError extends Error {
     constructor(message: string) {
