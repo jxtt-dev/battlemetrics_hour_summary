@@ -17,6 +17,20 @@ function getSessionDurationString(sessionData: SessionData): string {
     return generateSessionDurationString(currentSession.attributes.start);
 }
 
+async function updateSessionDuration(
+    sessionDurationText: HTMLElement,
+    sessionDataReady: Promise<void>
+): Promise<void> {
+    try {
+        await sessionDataReady;
+        if (GLOBAL_STATE.sessionData !== null) {
+            sessionDurationText.textContent = getSessionDurationString(
+                GLOBAL_STATE.sessionData
+            );
+        }
+    } catch {}
+}
+
 /**
  * Applies compact layout to player page
  */
@@ -112,12 +126,8 @@ export async function compactPlayerPage(sessionDataReady: Promise<void>) {
             const sessionDurationText = sessionDurationRow.querySelector(
                 'p'
             ) as HTMLElement;
-            await sessionDataReady;
-            if (GLOBAL_STATE.sessionData !== null) {
-                sessionDurationText.textContent = getSessionDurationString(
-                    GLOBAL_STATE.sessionData
-                );
-            }
+            // Update session duration asynchronously so subsequent UI rendering is not blocked
+            updateSessionDuration(sessionDurationText, sessionDataReady);
         } else {
             sessionDurationRow.style.display = 'none';
         }

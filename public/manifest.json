@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
-    "name": "BattleMetrics Hour Summary",
-    "version": "1.2.1",
+    "name": "BattleMetrics Hour Summary - Zulu",
+    "version": "1.2.1.0",
     "author": "jxtt-dev",
     "description": "Summarizes player hours on BattleMetrics.",
     "homepage_url": "https://github.com/jxtt-dev/battlemetrics_hour_summary",

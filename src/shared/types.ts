@@ -115,7 +115,10 @@ export interface GamePlaytime {
 export type GamePlaytimes = Record<string, GamePlaytime>;
 
 /**
- * Playtime for each game, by day.
+ * Playtime in hours for each game, by day.
+ *
+ * Keys are game ids; each value holds one number per day (hours played),
+ * with index 0 being today, 1 yesterday, and so on backwards.
  */
 export type DailyPlaytime = Record<string, number[]>;
 
@@ -155,7 +158,12 @@ export interface GlobalStore {
 }
 
 /**
- * Shared rate-limit budget for BattleMetrics API requests.
+ * Shared rate-limit budget for BattleMetrics /_api/ requests.
+ *
+ * `remaining`/`resetTime` track the per-minute window from the API's
+ * X-Rate-Limit-* response headers (falling back to local constants when
+ * absent), `lastRequestTime` throttles to the max requests-per-second, and
+ * `retryPromise` lets concurrent callers share a single 429 retry wait.
  */
 export interface RateLimitState {
     remaining: number;
@@ -165,68 +173,36 @@ export interface RateLimitState {
 }
 
 /**
- * Raw server-playtime record as stored in data store players.serverInfo[playerId]
+ * BattleMetrics request-signing session from data store (`env` slice)
  */
-export interface RawPlayerServerInfo {
-    serverId: string | number;
-    playerId?: string | number;
-    firstSeen?: string | number;
-    lastSeen?: string | number;
-    online?: boolean;
-    timePlayed: number;
+export interface SigningSession {
+    seed: string;
+    instanceId: string;
 }
 
 /**
- * Raw server record as stored in data store servers.servers[serverId]
+ * Message relayed from main.ts over the session MessageChannel
  */
-export interface RawServerInfo {
-    id: string | number;
-    game_id?: string;
-    gameId?: string;
-    name?: string;
-    address?: string;
-    status?: string;
-    private?: boolean;
-    details?: Record<string, unknown>;
+export interface SessionRelayMessage {
+    session: SigningSession;
 }
 
 /**
- * Raw session record as stored in data store sessions.sessions[sessionId]
+ * Thrown when no BattleMetrics request session could be captured within the timeout
  */
-export interface RawSessionInfo {
-    id: string;
-    player_id?: string | number;
-    server_id?: string | number;
-    start: string | number;
-    stop?: string | number | null;
-    name?: string;
-    firstTime?: boolean;
-    private?: boolean;
-    identifierIds?: Array<string | number>;
-}
-
-/**
- * Payload of player, server, and session data extracted from data store
- */
-export interface FiberPlayerDataPayload {
-    serverInfoByPlayer: Record<string, Record<string, RawPlayerServerInfo>>;
-    servers: Record<string, RawServerInfo>;
-    sessions?: Record<string, RawSessionInfo>;
-}
-
-/**
- * Message relayed from main.ts over the data MessageChannel
- */
-export interface FiberDataRelayMessage {
-    payload: FiberPlayerDataPayload;
-}
-
-/**
- * Thrown when no BattleMetrics player data could be captured from the data store
- */
-export class FiberDataUnavailableError extends Error {
+export class SessionUnavailableError extends Error {
     constructor(message: string) {
         super(message);
-        this.name = 'FiberDataUnavailableError';
+        this.name = 'SessionUnavailableError';
+    }
+}
+
+/**
+ * Thrown when the request session is stale and could not be recovered
+ */
+export class SessionExpiredError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'SessionExpiredError';
     }
 }

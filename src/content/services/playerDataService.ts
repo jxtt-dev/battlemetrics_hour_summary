@@ -3,74 +3,10 @@ import {
     BMIdentifierRecord,
     BMServerRecord,
     GamePlaytimes,
-    FiberPlayerDataPayload,
-    FiberDataUnavailableError,
 } from '../../shared/types';
 import { GLOBAL_STATE } from './globalState';
-import { fetchApi } from '../../utils/fetchApi';
-import { isValidGameId, toIsoString } from '../../utils/helpers';
-import { isApiKeyConfigured } from '../../utils/extensionOptionHelpers';
-import { getFiberPlayerData } from '../../utils/fiberDataManager';
-
-/**
- * Transform data store player and server data into standard BMServerRecord array
- */
-export function transformFiberPayloadToRecords(
-    playerId: string,
-    payload: FiberPlayerDataPayload
-): BMServerRecord[] {
-    const playerServers = payload.serverInfoByPlayer[playerId];
-    if (!playerServers) return [];
-
-    const serverRecords: BMServerRecord[] = [];
-
-    for (const [serverId, info] of Object.entries(playerServers)) {
-        const serverMeta = payload.servers[serverId];
-        const gameId = serverMeta?.game_id ?? serverMeta?.gameId ?? 'unknown';
-        const serverName = serverMeta?.name ?? `Server ${serverId}`;
-        const address = serverMeta?.address ?? '';
-        const status = serverMeta?.status ?? 'unknown';
-        const isPrivate = Boolean(serverMeta?.private);
-
-        const firstSeenStr = toIsoString(
-            info.firstSeen ?? new Date().toISOString()
-        );
-
-        const lastSeenStr = toIsoString(
-            info.lastSeen ?? new Date().toISOString()
-        );
-
-        const record: BMServerRecord = {
-            type: 'server',
-            id: String(info.serverId ?? serverId),
-            attributes: {
-                id: String(info.serverId ?? serverId),
-                name: serverName,
-                address: address,
-                status: status,
-                private: isPrivate,
-            },
-            relationships: {
-                game: {
-                    data: {
-                        type: 'game',
-                        id: gameId,
-                    },
-                },
-            },
-            meta: {
-                timePlayed: info.timePlayed,
-                firstSeen: firstSeenStr,
-                lastSeen: lastSeenStr,
-                online: Boolean(info.online),
-            },
-        };
-
-        serverRecords.push(record);
-    }
-
-    return serverRecords;
-}
+import { fetchWithRateLimit } from '../../utils/fetchWithRateLimit';
+import { isValidGameId } from '../../utils/helpers';
 
 /**
  * Fetch player server data and past IDs
@@ -84,39 +20,29 @@ export async function fetchPlayerData(): Promise<
         throw new Error('playerId not found in GLOBAL_STATE');
     }
     const playerId = GLOBAL_STATE.playerId;
+    const url =
+        BM_API +
+        'players/' +
+        playerId +
+        '?' +
+        new URLSearchParams({
+            'include': 'server,identifier',
+            'fields[server]': 'name,address,status,private',
+            'fields[identifier]': 'identifier,lastSeen,private',
+        }).toString();
 
-    // Use paid API if API key is provided
-    if (await isApiKeyConfigured()) {
-        const url =
-            BM_API +
-            'players/' +
-            playerId +
-            '?' +
-            new URLSearchParams({
-                'include': 'server,identifier',
-                'fields[server]': 'name,address,status,private',
-                'fields[identifier]': 'identifier,lastSeen,private',
-            }).toString();
-
-        const json = await fetchApi<{
-            included?: (BMIdentifierRecord | BMServerRecord)[];
-        }>(url);
-        if (!json || !('included' in json) || !json.included) {
-            throw new Error(`BattleMetrics API returned incorrect data`);
-        }
-        return json.included;
-    }
-
-    // Default: Extract data from data store
-    const fiberPayload = await getFiberPlayerData(playerId);
-    if (fiberPayload === null) {
-        throw new FiberDataUnavailableError(
-            `Unable to retrieve player data from page state for player ${playerId}`
+    const response = await fetchWithRateLimit(url);
+    if (!response.ok) {
+        throw new Error(
+            `BattleMetrics API Response status: ${response.status}`
         );
     }
 
-    const records = transformFiberPayloadToRecords(playerId, fiberPayload);
-    return records;
+    const json = await response.json();
+    if (!('included' in json)) {
+        throw new Error(`BattleMetrics API returned incorrect data`);
+    }
+    return json.included;
 }
 
 /**

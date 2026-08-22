@@ -1,181 +1,160 @@
-// Runs in the page's MAIN world at document_start to extract player and server data
-// from the data store and relay it over a MessageChannel.
+import { SESSION_INIT_MESSAGE } from './shared/signing';
+import type { SigningSession, SessionRelayMessage } from './shared/types';
 
-import { DATA_INIT_MESSAGE } from './shared/constants';
-import type {
-    FiberPlayerDataPayload,
-    FiberDataRelayMessage,
-    RawPlayerServerInfo,
-    RawServerInfo,
-    RawSessionInfo,
-} from './shared/types';
-import { extractPlayerId, isPlayerOverviewPage } from './utils/helpers';
+const SEED_RE = /^[0-9a-f]{64}$/;
+const INSTANCE_ID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface DataStore {
-    getState(): {
-        players?: {
-            serverInfo?: Record<string, Record<string, RawPlayerServerInfo>>;
-        };
-        servers?: { servers?: Record<string, RawServerInfo> };
-        sessions?: { sessions?: Record<string, RawSessionInfo> };
-    };
-    subscribe(listener: () => void): () => void;
+interface StoreLike {
+    getState(): unknown;
+    subscribe(listener: () => void): unknown;
 }
 
-let cachedStore: DataStore | null = null;
+let cachedStore: StoreLike | null = null;
+let cachedFiberKey: string | null = null;
+let subscribed = false;
 let port: MessagePort | null = null;
-let activeUnsubscribe: (() => void) | null = null;
+let lastSeed = '';
+let lastInstanceId = '';
+let observer: MutationObserver | null = null;
 
-/**
- * Locate the BattleMetrics data store on the root element.
- */
-function getStore(): DataStore | null {
-    if (cachedStore) return cachedStore;
-
-    const root = document.getElementById('root') as Record<string, any> | null;
-    if (!root) return null;
-
-    const fiberKey = Object.keys(root).find(
-        (k) => k.startsWith('__reactContainer') || k.startsWith('__reactFiber')
-    );
-    if (!fiberKey) return null;
-
-    let fiber = root[fiberKey];
-    while (fiber) {
-        const store = fiber.memoizedProps?.store;
-        if (typeof store?.getState === 'function') {
-            cachedStore = store;
-            return store;
+function getFiberKey(root: HTMLElement): string | null {
+    if (cachedFiberKey !== null && cachedFiberKey in root) {
+        return cachedFiberKey;
+    }
+    for (const key in root) {
+        if (
+            key.startsWith('__reactContainer') ||
+            key.startsWith('__reactFiber')
+        ) {
+            cachedFiberKey = key;
+            return key;
         }
-        fiber = fiber.child ?? fiber.sibling;
+    }
+    return null;
+}
+
+function findStore(): StoreLike | null {
+    if (cachedStore !== null) return cachedStore;
+
+    const root = document.getElementById('root');
+    if (root === null) return null;
+
+    const fiberKey = getFiberKey(root);
+    if (fiberKey === null) return null;
+
+    const stack: unknown[] = [
+        (root as unknown as Record<string, unknown>)[fiberKey],
+    ];
+
+    while (stack.length > 0) {
+        const fiber = stack.pop();
+        if (fiber === null || fiber === undefined) continue;
+
+        const props = (fiber as { memoizedProps?: unknown }).memoizedProps;
+        if (
+            props !== null &&
+            typeof props === 'object' &&
+            'store' in (props as object)
+        ) {
+            const store = (props as { store: unknown }).store;
+            if (
+                store !== null &&
+                typeof store === 'object' &&
+                typeof (store as { getState?: unknown }).getState === 'function'
+            ) {
+                cachedStore = store as StoreLike;
+                return cachedStore;
+            }
+        }
+
+        const sibling = (fiber as { sibling?: unknown }).sibling;
+        if (sibling !== null && sibling !== undefined) stack.push(sibling);
+        const child = (fiber as { child?: unknown }).child;
+        if (child !== null && child !== undefined) stack.push(child);
     }
 
     return null;
 }
 
-/**
- * Wait until the data store is mounted in the DOM.
- */
-function waitForStore(): Promise<DataStore> {
-    const immediate = getStore();
-    if (immediate) return Promise.resolve(immediate);
-
-    return new Promise((resolve) => {
-        const observer = new MutationObserver(() => {
-            const store = getStore();
-            if (store) {
-                observer.disconnect();
-                resolve(store);
-            }
-        });
-        observer.observe(document, { childList: true, subtree: true });
-    });
-}
-
-/**
- * Extract the minimal data slice required for a single player.
- */
-function slicePlayerData(
-    store: DataStore,
-    playerId: string
-): FiberPlayerDataPayload | null {
+function readSession(): SigningSession | null {
+    const store = findStore();
+    if (store === null) return null;
     try {
-        const state = store.getState();
-        const playerServers = state?.players?.serverInfo?.[playerId];
-        const allServers = state?.servers?.servers;
-        if (!playerServers || !allServers) return null;
+        const state = store.getState() as {
+            env?: { signatureSeed?: unknown; instanceId?: unknown };
+        } | null;
+        const env = state?.env;
+        if (!env || typeof env !== 'object') return null;
 
-        const relevantServers: Record<string, RawServerInfo> = {};
-        for (const serverId of Object.keys(playerServers)) {
-            if (allServers[serverId]) {
-                relevantServers[serverId] = allServers[serverId];
-            }
+        const seed = env.signatureSeed;
+        const instanceId = env.instanceId;
+        if (typeof seed !== 'string' || !SEED_RE.test(seed)) return null;
+        if (
+            typeof instanceId !== 'string' ||
+            !INSTANCE_ID_RE.test(instanceId)
+        ) {
+            return null;
         }
-
-        let playerSessions: Record<string, RawSessionInfo> | undefined;
-        if (state.sessions?.sessions) {
-            playerSessions = {};
-            for (const [id, s] of Object.entries(state.sessions.sessions)) {
-                if (!s.player_id || String(s.player_id) === String(playerId)) {
-                    playerSessions[id] = s;
-                }
-            }
-        }
-
-        return {
-            serverInfoByPlayer: { [playerId]: playerServers },
-            servers: relevantServers,
-            sessions: playerSessions,
-        };
+        return { seed, instanceId };
     } catch {
         return null;
     }
 }
 
-/**
- * Fulfill a player data request by sending immediate data or subscribing until loaded.
- */
-async function fulfillPlayerRequest(playerId: string): Promise<void> {
-    if (!port || !playerId) return;
-
-    if (activeUnsubscribe) {
-        activeUnsubscribe();
-        activeUnsubscribe = null;
-    }
-
-    const store = await waitForStore();
-
-    // Player data is already present in data store
-    const immediate = slicePlayerData(store, playerId);
-    if (immediate) {
-        port.postMessage({
-            payload: immediate,
-        } satisfies FiberDataRelayMessage);
+function sendSession(): void {
+    if (port === null) return;
+    const session = readSession();
+    if (session === null) return;
+    if (session.seed === lastSeed && session.instanceId === lastInstanceId) {
         return;
     }
-
-    // Slow path: wait for data store to receive player data, then send and unsubscribe
-    const unsubscribe = store.subscribe(() => {
-        const payload = slicePlayerData(store, playerId);
-        if (payload) {
-            if (typeof unsubscribe === 'function') {
-                unsubscribe();
-            }
-            activeUnsubscribe = null;
-            port?.postMessage({ payload } satisfies FiberDataRelayMessage);
-        }
-    });
-
-    if (typeof unsubscribe === 'function') {
-        activeUnsubscribe = unsubscribe;
-    }
+    lastSeed = session.seed;
+    lastInstanceId = session.instanceId;
+    port.postMessage({ session } satisfies SessionRelayMessage);
 }
 
-function initMainRelay(): void {
+function checkStore(): void {
+    const store = findStore();
+    if (store !== null && !subscribed) {
+        subscribed = true;
+        try {
+            store.subscribe(sendSession);
+        } catch {}
+        if (observer !== null) {
+            observer.disconnect();
+            observer = null;
+        }
+    }
+    sendSession();
+}
+
+function initObserver(): void {
+    checkStore();
+
+    if (!subscribed) {
+        observer = new MutationObserver(() => {
+            checkStore();
+        });
+        observer.observe(document, { childList: true, subtree: true });
+    }
+
     window.addEventListener('message', (event: MessageEvent) => {
         if (
             event.source !== window ||
-            event.data?.[DATA_INIT_MESSAGE] !== true
+            event.data === null ||
+            typeof event.data !== 'object'
         ) {
             return;
         }
-
+        const messageData = event.data as Record<string, unknown>;
+        if (messageData[SESSION_INIT_MESSAGE] !== true) return;
         const incomingPort = event.ports?.[0];
-        if (!incomingPort) return;
+        if (incomingPort === undefined) return;
         port = incomingPort;
-
-        port.onmessage = (portEvent: MessageEvent) => {
-            const playerId =
-                portEvent.data?.playerId ||
-                (isPlayerOverviewPage(location.href)
-                    ? extractPlayerId(location.href)
-                    : '');
-            void fulfillPlayerRequest(playerId);
-        };
-
-        if (isPlayerOverviewPage(location.href)) {
-            void fulfillPlayerRequest(extractPlayerId(location.href));
-        }
+        lastSeed = '';
+        lastInstanceId = '';
+        checkStore();
     });
 }
 
@@ -183,5 +162,5 @@ function initMainRelay(): void {
     const win = window as unknown as { __bmhsObserverInstalled?: boolean };
     if (win.__bmhsObserverInstalled) return;
     win.__bmhsObserverInstalled = true;
-    initMainRelay();
+    initObserver();
 })();

@@ -3,17 +3,18 @@ import {
     SERVERS_DIV_SELECTOR,
     PLAYER_PAGE_ID,
 } from '../../../shared/constants';
-import { FiberDataUnavailableError } from '../../../shared/types';
+import {
+    SessionExpiredError,
+    SessionUnavailableError,
+} from '../../../shared/types';
 import type { ExtensionOptionsState } from '../../../shared/extensionOptions';
 import {
     generateSessionDurationString,
     getCurrentSession,
     waitForElement,
 } from '../../../utils/helpers';
-import {
-    getExtensionOptions,
-    isApiKeyConfigured,
-} from '../../../utils/extensionOptionHelpers';
+import { getExtensionOptions } from '../../../utils/extensionOptionHelpers';
+import { triggerSessionRecoveryReload } from '../../../utils/sessionRecovery';
 import { initPrevIdsHTML, populatePrevIdsHTML } from '../PreviousIds';
 import { generateTabButtons, generateGameTabs } from '../GameTab';
 
@@ -124,13 +125,11 @@ async function populateSummaryHTML(
     summaryDiv.classList.toggle('bmhs-loading-state');
     summaryDiv.innerHTML = '';
 
-    const hasApiKey = await isApiKeyConfigured();
-
     // Add tab buttons for each game
     generateTabButtons();
 
     // Add tab content for each game
-    generateGameTabs(hasApiKey);
+    generateGameTabs();
 
     // Add current session duration if not in compact mode
     if (!extensionOptions['playerPageCompactMode']) {
@@ -231,17 +230,30 @@ export function renderError(error?: unknown): void {
     summaryDiv.classList.add('bmhs-error-state');
 
     const message = document.createElement('p');
-    if (error instanceof FiberDataUnavailableError) {
+    if (error instanceof SessionExpiredError) {
         message.textContent =
-            'Unable to extract player data from page state — reload to try again.';
-        const reloadBtn = document.createElement('button');
-        reloadBtn.textContent = 'Reload';
-        reloadBtn.addEventListener('click', () => window.location.reload());
-        summaryDiv.replaceChildren(message, reloadBtn);
+            'BM did not establish a valid session on page load - reload to try again.';
+        summaryDiv.replaceChildren(message, renderReloadButton());
+    } else if (error instanceof SessionUnavailableError) {
+        message.textContent =
+            'Unable to capture a session — reload to try again.';
+        summaryDiv.replaceChildren(message, renderReloadButton());
     } else {
         message.textContent = 'Error generating Hour Summary.';
         summaryDiv.replaceChildren(message);
     }
+}
+
+/**
+ * Render the reload button for session recovery errors
+ */
+function renderReloadButton(): HTMLButtonElement {
+    const reloadButton = document.createElement('button');
+    reloadButton.textContent = 'Reload';
+    reloadButton.addEventListener('click', () =>
+        triggerSessionRecoveryReload()
+    );
+    return reloadButton;
 }
 
 /**
@@ -255,16 +267,16 @@ export async function render(sessionDataReady: Promise<void>): Promise<void> {
 
     // Fetch extension options
     const extensionOptions = await getExtensionOptions();
-    const hasApiKey = await isApiKeyConfigured();
 
-    // Initialize previous identifiers link (grayed out and disabled if no API key)
-    initPrevIdsHTML(hasApiKey);
+    // Initialize previous identifiers link
+    initPrevIdsHTML();
 
-    // Populate previous identifiers if API key is present and identifiers exist
-    if (hasApiKey && GLOBAL_STATE.identifierData.length > 0) {
+    // Populate previous identifiers if identifiers exist
+    if (GLOBAL_STATE.identifierData.length > 0) {
         populatePrevIdsHTML();
     }
 
     // Populate hour summary with fetched data
     await populateSummaryHTML(extensionOptions, sessionDataReady);
 }
+

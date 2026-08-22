@@ -3,12 +3,3 @@
   --bmhs-dark-gray-color: #151515;
   --bmhs-loading-gray-color: #1C1C1C;
 }
-
-.bmhs-disabled {
-  opacity: 0.5;
-  cursor: not-allowed !important;
-}
-
-.bmhs-disabled * {
-  cursor: not-allowed !important;
-}

@@ -38,7 +38,7 @@ export function generateTabButtons() {
 /**
  * Generate tab with summary for each game
  */
-export function generateGameTabs(hasApiKey = false) {
+export function generateGameTabs() {
     const gamePlaytime = GLOBAL_STATE.gamePlaytime;
     const summaryDiv = document.getElementById('bmhs-hour-summary');
     if (summaryDiv === null) {
@@ -70,10 +70,7 @@ export function generateGameTabs(hasApiKey = false) {
         `;
 
         // Append period playtime display and selector
-        const periodPlaytime: HTMLDivElement = generatePeriodPlaytime(
-            gameId,
-            hasApiKey
-        );
+        const periodPlaytime: HTMLDivElement = generatePeriodPlaytime(gameId);
         tabContentDiv.appendChild(periodPlaytime);
 
         // Add graph wrapper and buttons

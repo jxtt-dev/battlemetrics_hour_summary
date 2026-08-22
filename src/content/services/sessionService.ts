@@ -1,15 +1,8 @@
-import {
-    SessionData,
-    DailyPlaytime,
-    BMSessionRecord,
-    RawSessionInfo,
-} from '../../shared/types';
+import { SessionData, DailyPlaytime } from '../../shared/types';
 import { BM_API } from '../../shared/constants';
 import { GLOBAL_STATE } from './globalState';
-import { fetchApi } from '../../utils/fetchApi';
-import { dedupeIncluded, toIsoString } from '../../utils/helpers';
-import { isApiKeyConfigured } from '../../utils/extensionOptionHelpers';
-import { getFiberPlayerData } from '../../utils/fiberDataManager';
+import { fetchWithRateLimit } from '../../utils/fetchWithRateLimit';
+import { dedupeIncluded } from '../../utils/helpers';
 
 interface BMSessionPage {
     data: SessionData['data'];
@@ -19,6 +12,11 @@ interface BMSessionPage {
 
 /**
  * Check if oldest session fetched is before the periodEnd cutoff
+ *
+ * @param cumulativeData SessionData
+ * @param periodEnd number
+ *
+ * @returns boolean
  */
 function sessionEndReached(
     cumulativeData: SessionData,
@@ -42,23 +40,21 @@ function sessionEndReached(
 }
 
 /**
- * Strip invalid parameters off pagination cursors if present
+ * Strip the ",uuid" half off a pagination cursor. The API's links.next
+ * cursor (page[key]=<timestamp>,<uuid>) returns an empty page from the
+ * /_api endpoint; only the bare timestamp part works.
  */
-function fixPaginationCursor(pageUrl: string | null): string | null {
+function usableNextLink(pageUrl: string | null): string | null {
     if (pageUrl === null) return null;
-    try {
-        const url = new URL(pageUrl, BM_API);
-        const cursor = url.searchParams.get('page[key]');
-        if (cursor !== null) {
-            const comma = cursor.indexOf(',');
-            if (comma > 0) {
-                url.searchParams.set('page[key]', cursor.slice(0, comma));
-            }
+    const url = new URL(pageUrl, location.origin);
+    const cursor = url.searchParams.get('page[key]');
+    if (cursor !== null) {
+        const comma = cursor.indexOf(',');
+        if (comma > 0) {
+            url.searchParams.set('page[key]', cursor.slice(0, comma));
         }
-        return url.toString();
-    } catch {
-        return pageUrl;
     }
+    return url.toString();
 }
 
 /**
@@ -72,7 +68,7 @@ function sessionBaseUrl(playerId: string): string {
         '/relationships/sessions' +
         '?' +
         new URLSearchParams({
-            'include': 'server',
+            include: 'server',
             'page[size]': '100',
         }).toString()
     );
@@ -82,79 +78,20 @@ function sessionBaseUrl(playerId: string): string {
  * Fetch one page of session data from the BattleMetrics API
  */
 async function fetchPage(pageUrl: string): Promise<BMSessionPage> {
-    const body = await fetchApi<BMSessionPage>(pageUrl);
-    if (!body || !('data' in body)) {
+    const response = await fetchWithRateLimit(pageUrl);
+
+    if (!response.ok) {
+        throw new Error(
+            `BattleMetrics API Response status: ${response.status}`
+        );
+    }
+
+    const body = (await response.json()) as BMSessionPage;
+    if (!('data' in body)) {
         throw new Error(`BattleMetrics API returned incorrect data`);
     }
 
     return body;
-}
-
-/**
- * Convert a raw data session record into a BMSessionRecord
- */
-function toSessionRecord(
-    id: string,
-    s: RawSessionInfo,
-    playerId: string
-): BMSessionRecord {
-    return {
-        type: 'session',
-        id: String(s.id ?? id),
-        attributes: {
-            start: toIsoString(s.start),
-            stop: s.stop ? toIsoString(s.stop) : null,
-            firstTime: Boolean(s.firstTime),
-            name: s.name ?? '',
-            private: Boolean(s.private),
-        },
-        relationships: {
-            server: {
-                data: {
-                    type: 'server',
-                    id: String(s.server_id ?? ''),
-                },
-            },
-            player: {
-                data: {
-                    type: 'player',
-                    id: String(s.player_id ?? playerId),
-                },
-            },
-            identifiers: {
-                data: {
-                    type: 'identifier',
-                    id: '',
-                },
-            },
-        },
-    };
-}
-
-/**
- * Extract available session data from the data store
- */
-async function fetchSessionsFromStore(playerId: string): Promise<SessionData> {
-    const fiberPayload = await getFiberPlayerData(playerId);
-    const rawSessions = fiberPayload?.sessions;
-
-    const sessionsData: BMSessionRecord[] = rawSessions
-        ? Object.entries(rawSessions)
-              .filter(
-                  ([, s]) =>
-                      !s.player_id || String(s.player_id) === String(playerId)
-              )
-              .map(([id, s]) => toSessionRecord(id, s, playerId))
-        : [];
-
-    return {
-        data: sessionsData,
-        included: GLOBAL_STATE.serverData,
-        links: {
-            next: null,
-            prev: null,
-        },
-    };
 }
 
 /**
@@ -167,7 +104,7 @@ async function fetchFirstSessionPage(playerId: string): Promise<SessionData> {
         data: body.data,
         included: dedupeIncluded(body.included ?? []),
         links: {
-            next: fixPaginationCursor(body.links?.next ?? null),
+            next: usableNextLink(body.links?.next ?? null),
             prev: body.links?.prev ?? null,
         },
     };
@@ -195,8 +132,8 @@ async function fetchSessionsUntilPeriodEnd(
     const periodEnd: number = periodEndDate.getTime();
 
     // Continue fetching from where the previous request stopped if possible
-    let nextUrl: string | null =
-        fixPaginationCursor(GLOBAL_STATE?.sessionData?.links?.next ?? null) ??
+    let nextUrl =
+        usableNextLink(GLOBAL_STATE?.sessionData?.links?.next ?? null) ??
         sessionBaseUrl(playerId);
 
     do {
@@ -204,7 +141,7 @@ async function fetchSessionsUntilPeriodEnd(
 
         sessionData.data.push(...page.data);
         sessionData.included.push(...(page.included ?? []));
-        sessionData.links.next = fixPaginationCursor(page.links?.next ?? null);
+        sessionData.links.next = usableNextLink(page.links?.next ?? null);
         sessionData.links.prev = page.links?.prev ?? null;
 
         const nextPageUrl = sessionData.links.next;
@@ -218,7 +155,7 @@ async function fetchSessionsUntilPeriodEnd(
 }
 
 /**
- * Fetch session data from the BattleMetrics API or data store
+ * Fetch session data from the BattleMetrics API
  *
  * @returns Promise<SessionData | null>
  */
@@ -230,12 +167,6 @@ export async function fetchSessionData(
     }
     const playerId = GLOBAL_STATE.playerId;
 
-    // If no API key is provided, get available session data from data store
-    if (!(await isApiKeyConfigured())) {
-        return fetchSessionsFromStore(playerId);
-    }
-
-    // When API key is provided, fetch from BattleMetrics API
     if (numberOfDays == null) {
         return fetchFirstSessionPage(playerId);
     }

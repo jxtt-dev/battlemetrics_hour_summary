@@ -4,7 +4,7 @@ import {
     fetchAndStoreSessionData,
 } from './content/services';
 import { getExtensionOptions } from './utils/extensionOptionHelpers';
-import { initFiberDataManager } from './utils/fiberDataManager';
+import { initSessionManager } from './utils/sessionManager';
 import { isPlayerOverviewPage, isServerPage } from './utils/helpers';
 import { compactPlayerPage } from './content/components/CompactPlayerPage';
 import {
@@ -140,7 +140,7 @@ async function handleLocationChange(): Promise<void> {
 
 (async () => {
     try {
-        initFiberDataManager();
+        initSessionManager();
 
         addLocationObserver(handleLocationChange);
         window.addEventListener('popstate', () => handleLocationChange());
