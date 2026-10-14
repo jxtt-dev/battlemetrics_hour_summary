@@ -1,4 +1,4 @@
-import { GLOBAL_STATE } from '../../services';
+import { GLOBAL_STATE, fetchServerInfo } from '../../services';
 import {
     SERVERS_DIV_SELECTOR,
     PLAYER_PAGE_ID,
@@ -7,6 +7,8 @@ import { FiberDataUnavailableError } from '../../../shared/types';
 import type { ExtensionOptionsState } from '../../../shared/extensionOptions';
 import {
     generateSessionDurationString,
+    generateServerLink,
+    getCurrentServerId,
     getCurrentSession,
     waitForElement,
 } from '../../../utils/helpers';
@@ -132,33 +134,9 @@ async function populateSummaryHTML(
     // Add tab content for each game
     generateGameTabs(hasApiKey);
 
-    // Add current session duration if not in compact mode
-    if (!extensionOptions['playerPageCompactMode']) {
+    // Add current session duration if not in compact mode (requires API key)
+    if (hasApiKey && !extensionOptions['playerPageCompactMode']) {
         await renderCurrentSessionDuration(sessionDataReady);
-    }
-}
-
-async function updateCurrentSessionDuration(
-    currentSessionTitle: HTMLElement,
-    currentSessionValue: HTMLElement,
-    sessionDataReady: Promise<void>
-): Promise<void> {
-    try {
-        await sessionDataReady;
-        if (GLOBAL_STATE.sessionData === null) return;
-        const currentSession = getCurrentSession(GLOBAL_STATE.sessionData);
-        if (currentSession === null) {
-            currentSessionTitle.style.display = 'none';
-            currentSessionValue.style.display = 'none';
-            return;
-        }
-
-        currentSessionValue.textContent = generateSessionDurationString(
-            currentSession.attributes.start
-        );
-    } catch {
-        currentSessionTitle.style.display = 'none';
-        currentSessionValue.style.display = 'none';
     }
 }
 
@@ -175,46 +153,51 @@ async function renderCurrentSessionDuration(
         throw new Error('Unable to find PLAYER_PAGE_ID');
     }
 
-    // Handles presence of "This player has been seen on over 250 servers" banner
     const rowDivs = playerPage.querySelectorAll(':scope > div.row:not([id])');
+    const detailsDiv = rowDivs[0] as HTMLDivElement | undefined;
 
-    let detailsDiv: HTMLDivElement;
-    if (rowDivs.length === 3) {
-        detailsDiv = rowDivs[1] as HTMLDivElement;
-    } else if (rowDivs.length === 2) {
-        detailsDiv = rowDivs[0] as HTMLDivElement;
-    } else {
-        throw new Error('Unable to find detailsDiv');
+    const descriptionList = detailsDiv?.querySelector('dl');
+    if (!descriptionList) return;
+
+    try {
+        await sessionDataReady;
+        if (GLOBAL_STATE.sessionData === null) return;
+        const currentSession = getCurrentSession(GLOBAL_STATE.sessionData);
+
+        // Player is offline
+        if (currentSession === null) return;
+
+        // Add current server to details div
+        const currentServerId = getCurrentServerId(currentSession);
+        if (!currentServerId) return;
+
+        const currentServerInfo = await fetchServerInfo(currentServerId);
+
+        const currentServerTitle = document.createElement('dt');
+        currentServerTitle.textContent = 'Current Server';
+        const currentServerValue = document.createElement('dd');
+        currentServerValue.appendChild(
+            generateServerLink(currentServerId, currentServerInfo)
+        );
+
+        descriptionList.appendChild(currentServerTitle);
+        descriptionList.appendChild(currentServerValue);
+
+        // Add session duration to details div
+        const currentSessionTitle = document.createElement('dt');
+        currentSessionTitle.textContent = 'Session Duration';
+        const currentSessionValue = document.createElement('dd');
+        currentSessionValue.textContent = generateSessionDurationString(
+            currentSession.attributes.start
+        );
+
+        descriptionList.appendChild(currentSessionTitle);
+        descriptionList.appendChild(currentSessionValue);
+    } catch (e) {
+        console.error(
+            `[BattleMetrics Hour Summary] Error rendering current session info: ${e}`
+        );
     }
-
-    const descriptionList = detailsDiv.querySelector('dl') as HTMLElement;
-
-    const currentServerList = descriptionList.querySelector(
-        'dd:last-child > ul'
-    ) as HTMLElement;
-    // Player is offline
-    if (!currentServerList) {
-        return;
-    }
-
-    // Remove margin on current server(s) list
-    currentServerList.style.setProperty('margin-bottom', '0');
-
-    // Add placeholder session duration to details div
-    const currentSessionTitle = document.createElement('dt');
-    currentSessionTitle.textContent = 'Session Duration';
-    const currentSessionValue = document.createElement('dd');
-    currentSessionValue.textContent = 'Loading...';
-
-    descriptionList.appendChild(currentSessionTitle);
-    descriptionList.appendChild(currentSessionValue);
-
-    // Set session duration text once session data is ready
-    updateCurrentSessionDuration(
-        currentSessionTitle,
-        currentSessionValue,
-        sessionDataReady
-    );
 }
 
 /**

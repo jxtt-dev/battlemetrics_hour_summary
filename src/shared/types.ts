@@ -38,6 +38,14 @@ export interface BMServerRecord {
 }
 
 /**
+ * Server name and game id used to build a server link
+ */
+export interface BMServerInfo {
+    name: string;
+    gameId: string;
+}
+
+/**
  * BattleMetrics Identifier Attributes
  */
 export interface BMIdentifierAttributes {

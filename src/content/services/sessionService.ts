@@ -2,6 +2,8 @@ import {
     SessionData,
     DailyPlaytime,
     BMSessionRecord,
+    BMRelationship,
+    BMServerInfo,
     RawSessionInfo,
 } from '../../shared/types';
 import { BM_API } from '../../shared/constants';
@@ -318,7 +320,8 @@ export function calculatePastSessions(
 
             // Convert to hours
             if (dayIndex >= 0 && dayIndex < numberOfDays) {
-                pastSessions[gameName][dayIndex] += (sliceEnd - cursor) / HOUR_MS;
+                pastSessions[gameName][dayIndex] +=
+                    (sliceEnd - cursor) / HOUR_MS;
             }
 
             cursor = nextDayMidnight;
@@ -326,4 +329,42 @@ export function calculatePastSessions(
     }
 
     return pastSessions;
+}
+
+/**
+ * Fetch the name and game id of a server from the paid API
+ * Requires API key
+ */
+export async function fetchServerInfo(
+    serverId: string
+): Promise<BMServerInfo> {
+    if (!(await isApiKeyConfigured())) {
+        throw new Error('API key required to fetch server info');
+    }
+
+    const url =
+        BM_API +
+        'servers/' +
+        serverId +
+        '?' +
+        new URLSearchParams({
+            'fields[server]': 'name',
+        }).toString();
+
+    const json = await fetchApi<{
+        data?: {
+            type: 'server';
+            id: string;
+            attributes: { name: string };
+            relationships: { game: { data: BMRelationship } };
+        };
+    }>(url);
+    if (!json || !('data' in json) || !json.data) {
+        throw new Error(`BattleMetrics API returned incorrect data`);
+    }
+
+    return {
+        name: json.data.attributes.name,
+        gameId: json.data.relationships.game.data.id,
+    };
 }
