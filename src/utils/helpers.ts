@@ -2,7 +2,12 @@ import {
     PLAYER_OVERVIEW_PAGE_REGEX,
     SERVER_PAGE_REGEX,
 } from '../shared/constants';
-import { BMSessionRecord, BMServerRecord, SessionData } from '../shared/types';
+import {
+    BMSessionRecord,
+    BMServerRecord,
+    SessionData,
+    BMServerInfo,
+} from '../shared/types';
 import { GAME_NAME_MAPPING } from '../shared/gameNameMapping';
 
 /**
@@ -121,6 +126,19 @@ export function generateSessionDurationString(
 }
 
 /**
+ * Convert server name and ID into server link
+ */
+export function generateServerLink(
+    serverId: string,
+    serverInfo: BMServerInfo
+): HTMLAnchorElement {
+    const link = document.createElement('a');
+    link.href = `/servers/${serverInfo.gameId}/${serverId}`;
+    link.textContent = serverInfo.name;
+    return link;
+}
+
+/**
  * Convert a timestamp (epoch ms number or string) to an ISO string
  */
 export function toIsoString(value: string | number): string {
@@ -203,6 +221,13 @@ export function getCurrentSession(
     }
 
     return currentSession;
+}
+
+/**
+ * Get current server id from current session
+ */
+export function getCurrentServerId(currentSession: BMSessionRecord): string {
+    return currentSession.relationships.server.data.id;
 }
 
 /**

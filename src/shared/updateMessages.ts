@@ -1,4 +1,11 @@
 export const updateMessages: Record<string, string> = {
+    '1.2.2': `
+        <p>Bug fixes:</p>
+        <ul>
+            <li>Updates hour summary rendering for new Player Overview page.</li>
+            <li>Add back current server to Player Overview page (requires API key).</li>
+        </ul>
+    `,
     '1.2.1': `
         <p>This update includes important changes due to recent BattleMetrics API updates:</p>
         <ul>

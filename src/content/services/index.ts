@@ -4,4 +4,8 @@ export {
     fetchAndStoreSessionData,
 } from './summaryDataService';
 export { fetchPlayerData, calculateGamePlaytimes } from './playerDataService';
-export { fetchSessionData, calculatePastSessions } from './sessionService';
+export {
+    fetchSessionData,
+    fetchServerInfo,
+    calculatePastSessions,
+} from './sessionService';
